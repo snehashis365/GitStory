@@ -1,0 +1,445 @@
+import { useState, useEffect, useRef, useCallback, type FormEvent, type ComponentType, type SVGProps } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  Key, Sparkles, ChevronDown, Eye, EyeOff,
+  ExternalLink, Loader2, CheckCircle2, AlertCircle,
+} from 'lucide-react';
+import type { AIProviderConfig, AIProviderType } from '../types';
+import {
+  GoogleGeminiIcon,
+  OpenAIIcon,
+  AnthropicClaudeIcon,
+  NvidiaIcon,
+  LocalServerIcon,
+} from './BrandIcons';
+import { fetchAvailableModels } from '../services/aiService';
+import { getStoredGitHubToken, saveStoredGitHubToken } from '../services/githubService';
+
+// ─── Provider metadata ────────────────────────────────────────────────────────
+const PROVIDERS: {
+  id: AIProviderType;
+  label: string;
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  placeholder: string;
+  docsUrl: string;
+  defaultModel: string;
+  note?: string;
+}[] = [
+  {
+    id: 'gemini',
+    label: 'Google Gemini',
+    icon: GoogleGeminiIcon,
+    placeholder: 'AIza...',
+    docsUrl: 'https://aistudio.google.com/app/apikey',
+    defaultModel: 'gemini-2.0-flash',
+  },
+  {
+    id: 'openai',
+    label: 'OpenAI',
+    icon: OpenAIIcon,
+    placeholder: 'sk-...',
+    docsUrl: 'https://platform.openai.com/api-keys',
+    defaultModel: 'gpt-4o-mini',
+  },
+  {
+    id: 'anthropic',
+    label: 'Anthropic Claude',
+    icon: AnthropicClaudeIcon,
+    placeholder: 'sk-ant-...',
+    docsUrl: 'https://console.anthropic.com/settings/keys',
+    defaultModel: 'claude-3-5-haiku-latest',
+  },
+  {
+    id: 'nvidia',
+    label: 'NVIDIA NIM',
+    icon: NvidiaIcon,
+    placeholder: 'nvapi-...',
+    docsUrl: 'https://build.nvidia.com/explore/discover',
+    defaultModel: 'meta/llama-3.1-70b-instruct',
+    note: 'Uses NVIDIA NIM API (OpenAI-compatible)',
+  },
+  {
+    id: 'local',
+    label: 'Local Endpoint',
+    icon: LocalServerIcon,
+    placeholder: 'optional-key',
+    docsUrl: 'https://ollama.com',
+    defaultModel: 'llama3',
+    note: 'Ollama, LM Studio, or any OpenAI-compatible local server',
+  },
+];
+
+// ─── LocalStorage helpers ─────────────────────────────────────────────────────
+const STORAGE_KEY = 'gitstory_ai_config_v1';
+const LEGACY_STORAGE_KEY = 'pulseisle_ai_config_v1';
+
+export function loadAIConfig(): AIProviderConfig | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as AIProviderConfig;
+  } catch {
+    return null;
+  }
+}
+
+export function saveAIConfig(cfg: AIProviderConfig) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg));
+}
+
+export function clearAIConfig() {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+// ─── Model-fetch hook ─────────────────────────────────────────────────────────
+type FetchState = 'idle' | 'loading' | 'ok' | 'error';
+
+function useModelList(provider: AIProviderType, apiKey: string, localEndpoint: string) {
+  const [models, setModels] = useState<string[]>([]);
+  const [fetchState, setFetchState] = useState<FetchState>('idle');
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const trigger = useCallback(() => {
+    // Anthropic: fetch immediately (no key validation needed for hardcoded list)
+    // Others: need a non-empty key (or non-empty endpoint for local)
+    const needsKey = provider !== 'local' && provider !== 'anthropic';
+    if (needsKey && apiKey.trim().length < 10) {
+      setModels([]);
+      setFetchState('idle');
+      setFetchError(null);
+      return;
+    }
+    if (provider === 'local' && !localEndpoint.trim()) {
+      setModels([]);
+      setFetchState('idle');
+      return;
+    }
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      abortRef.current?.abort();
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
+
+      setFetchState('loading');
+      setFetchError(null);
+      setModels([]);
+
+      try {
+        const fetched = await fetchAvailableModels(provider, apiKey.trim(), localEndpoint.trim());
+        setModels(fetched);
+        setFetchState('ok');
+      } catch (err: unknown) {
+        if ((err as Error).name === 'AbortError') return;
+        setFetchError((err as Error).message || 'Failed to load models');
+        setFetchState('error');
+      }
+    }, 700); // 700 ms debounce
+  }, [provider, apiKey, localEndpoint]);
+
+  // Auto-trigger when provider changes (Anthropic uses hardcoded list — fetch right away)
+  useEffect(() => {
+    trigger();
+    return () => {
+      debounceRef.current && clearTimeout(debounceRef.current);
+      abortRef.current?.abort();
+    };
+  }, [trigger]);
+
+  return { models, fetchState, fetchError };
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+interface AIProviderModalProps {
+  isOpen: boolean;
+  onConfirm: (cfg: AIProviderConfig) => void;
+}
+
+export function AIProviderModal({ isOpen, onConfirm }: AIProviderModalProps) {
+  const existing = loadAIConfig();
+  const [provider, setProvider] = useState<AIProviderType>(existing?.provider ?? 'gemini');
+  const [apiKey, setApiKey] = useState(existing?.apiKey ?? '');
+  const [model, setModel] = useState(existing?.model ?? '');
+  const [localEndpoint, setLocalEndpoint] = useState(
+    existing?.localEndpoint ?? 'http://localhost:11434/v1'
+  );
+  const [showKey, setShowKey] = useState(false);
+  const [ghToken, setGhToken] = useState(() => getStoredGitHubToken());
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const meta = PROVIDERS.find((p) => p.id === provider)!;
+  const { models, fetchState, fetchError } = useModelList(provider, apiKey, localEndpoint);
+
+  // When model list loads and current model is not in it, reset to first
+  useEffect(() => {
+    if (fetchState === 'ok' && models.length > 0 && !models.includes(model)) {
+      setModel(models[0]);
+    }
+  }, [fetchState, models, model]);
+
+  const handleProviderChange = (p: AIProviderType) => {
+    setProvider(p);
+    setApiKey('');
+    setModel('');
+    setSubmitError(null);
+  };
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (provider !== 'local' && !apiKey.trim()) {
+      setSubmitError('Please enter your API key.');
+      return;
+    }
+    if (provider === 'local' && !localEndpoint.trim()) {
+      setSubmitError('Please enter the local server endpoint URL.');
+      return;
+    }
+    setSubmitError(null);
+    const resolvedModel =
+      model.trim() ||
+      (models.length > 0 ? models[0] : meta.defaultModel);
+    const cfg: AIProviderConfig = {
+      provider,
+      apiKey: apiKey.trim(),
+      model: resolvedModel,
+      ...(provider === 'local' ? { localEndpoint: localEndpoint.trim() } : {}),
+    };
+    saveAIConfig(cfg);
+    saveStoredGitHubToken(ghToken);
+    onConfirm(cfg);
+  };
+
+  // ── Model field: dropdown when list loaded, text input as fallback ──
+  const modelField = (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <label className="text-sm font-semibold text-[#0F172A]">Model</label>
+        {fetchState === 'loading' && (
+          <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Fetching models…
+          </span>
+        )}
+        {fetchState === 'ok' && models.length > 0 && (
+          <span className="inline-flex items-center gap-1 text-xs text-[#0D9488]">
+            <CheckCircle2 className="h-3 w-3" />
+            {models.length} models found
+          </span>
+        )}
+        {fetchState === 'error' && (
+          <span className="inline-flex items-center gap-1 text-xs text-amber-600">
+            <AlertCircle className="h-3 w-3" />
+            {fetchError}
+          </span>
+        )}
+      </div>
+
+      {fetchState === 'ok' && models.length > 0 ? (
+        // ── Dropdown populated from API ──
+        <div className="relative">
+          <select
+            value={model || models[0]}
+            onChange={(e) => setModel(e.target.value)}
+            className="w-full appearance-none rounded-xl border border-slate-200 bg-[#F8FAFC] px-4 py-3 pr-10 text-sm font-mono text-[#0F172A] focus:border-[#FF5A5F] focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20 cursor-pointer"
+          >
+            {models.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        </div>
+      ) : (
+        // ── Free-text fallback ──
+        <div className="relative">
+          <input
+            type="text"
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            placeholder={
+              fetchState === 'loading'
+                ? 'Loading available models…'
+                : meta.defaultModel
+            }
+            disabled={fetchState === 'loading'}
+            className="w-full rounded-xl border border-slate-200 bg-[#F8FAFC] px-4 py-3 text-sm font-mono text-[#0F172A] placeholder:text-slate-400 focus:border-[#FF5A5F] focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20 disabled:opacity-60"
+          />
+          {fetchState === 'loading' && (
+            <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
+          )}
+        </div>
+      )}
+      <p className="text-xs text-slate-400">
+        {fetchState === 'ok' && models.length > 0
+          ? 'Select from the models available on your account.'
+          : 'Enter a valid API key above to auto-populate the model list.'}
+      </p>
+    </div>
+  );
+
+  const form = (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Local Endpoint (only for local) */}
+      {provider === 'local' && (
+        <div className="space-y-1.5">
+          <label className="text-sm font-semibold text-[#0F172A]">Server Endpoint URL</label>
+          <input
+            type="url"
+            value={localEndpoint}
+            onChange={(e) => { setLocalEndpoint(e.target.value); setSubmitError(null); }}
+            placeholder="http://localhost:11434/v1"
+            className="w-full rounded-xl border border-slate-200 bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] focus:border-[#FF5A5F] focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20"
+          />
+        </div>
+      )}
+
+      {/* API Key */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-semibold text-[#0F172A]">
+            {provider === 'local' ? 'API Key (optional)' : 'API Key'}
+          </label>
+          <a
+            href={meta.docsUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-xs font-medium text-[#0D9488] hover:underline"
+          >
+            Get key <ExternalLink className="h-3 w-3" />
+          </a>
+        </div>
+        <div className="relative">
+          <input
+            type={showKey ? 'text' : 'password'}
+            value={apiKey}
+            onChange={(e) => { setApiKey(e.target.value); setSubmitError(null); }}
+            placeholder={meta.placeholder}
+            autoComplete="off"
+            className="w-full rounded-xl border border-slate-200 bg-[#F8FAFC] px-4 py-3 pr-11 text-sm font-mono text-[#0F172A] focus:border-[#FF5A5F] focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20"
+          />
+          <button
+            type="button"
+            onClick={() => setShowKey((v) => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+            aria-label={showKey ? 'Hide key' : 'Show key'}
+          >
+            {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+        <p className="text-xs text-slate-500">
+          Stored locally in your browser only. Never sent to any third party.
+        </p>
+      </div>
+
+      {/* Model selector */}
+      {modelField}
+
+      {/* Optional GitHub Token */}
+      <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-1.5">
+        <label className="block text-xs font-bold text-slate-700">
+          GitHub Personal Access Token (Optional)
+        </label>
+        <p className="text-[11px] text-slate-500">
+          Unauthenticated calls are limited to 60 req/hr. Paste a fine-grained token to boost to 5,000 req/hr.
+        </p>
+        <input
+          type="password"
+          value={ghToken}
+          onChange={(e) => setGhToken(e.target.value)}
+          placeholder="ghp_... (stored locally in browser)"
+          autoComplete="off"
+          className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-mono text-[#0F172A] focus:border-[#FF5A5F] focus:outline-none"
+        />
+      </div>
+
+      {submitError && (
+        <p className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
+          {submitError}
+        </p>
+      )}
+
+      <button
+        type="submit"
+        className="w-full rounded-xl bg-[#FF5A5F] py-3 text-sm font-semibold text-white hover:bg-[#E0484D] transition-colors cursor-pointer"
+      >
+        {existing ? 'Update & Continue' : 'Save & Start Tracking'}
+      </button>
+    </form>
+  );
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 12 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-7 shadow-2xl shadow-slate-900/15"
+          >
+            {/* Header */}
+            <div className="mb-6 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF5A5F]/10">
+                <Key className="h-5 w-5 text-[#FF5A5F]" />
+              </div>
+              <div>
+                <h2 className="font-display text-lg font-bold text-[#0F172A]">
+                  Choose Your AI Provider
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  GitStory works with any major AI provider
+                </p>
+              </div>
+            </div>
+
+            {/* Provider badges */}
+            <div className="mb-5 flex flex-wrap gap-2">
+              {PROVIDERS.map((p) => {
+                const Icon = p.icon;
+                const isSelected = provider === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleProviderChange(p.id)}
+                    className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-all cursor-pointer border ${
+                      isSelected
+                        ? 'border-[#FF5A5F] bg-[#FF5A5F]/10 text-[#FF5A5F] shadow-xs'
+                        : 'border-slate-200 bg-[#F8FAFC] text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span>{p.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Provider note */}
+            {meta.note && (
+              <p className="mb-4 rounded-xl border border-slate-100 bg-[#F8FAFC] px-3 py-2 text-xs text-slate-500">
+                {meta.note}
+              </p>
+            )}
+
+            {form}
+
+            <p className="mt-4 text-center text-xs text-slate-400 flex items-center justify-center gap-1">
+              <Sparkles className="h-3 w-3 text-[#FF5A5F]" />
+              GitStory · AI-powered GitHub storytelling
+            </p>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
