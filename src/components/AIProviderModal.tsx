@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, type FormEvent, type Componen
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Key, Sparkles, ChevronDown, Eye, EyeOff,
-  ExternalLink, Loader2, CheckCircle2, AlertCircle,
+  ExternalLink, Loader2, CheckCircle2, AlertCircle, X,
 } from 'lucide-react';
 import type { AIProviderConfig, AIProviderType } from '../types';
 import {
@@ -173,9 +173,10 @@ function useModelList(provider: AIProviderType, apiKey: string, localEndpoint: s
 interface AIProviderModalProps {
   isOpen: boolean;
   onConfirm: (cfg: AIProviderConfig) => void;
+  onClose?: () => void;
 }
 
-export function AIProviderModal({ isOpen, onConfirm }: AIProviderModalProps) {
+export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalProps) {
   const existing = loadAIConfig();
   const [provider, setProvider] = useState<AIProviderType>(existing?.provider ?? 'gemini');
   const [apiKey, setApiKey] = useState(existing?.apiKey ?? '');
@@ -188,21 +189,69 @@ export function AIProviderModal({ isOpen, onConfirm }: AIProviderModalProps) {
   const [ghToken, setGhToken] = useState(() => getStoredGitHubToken());
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // Sync state whenever modal is opened so it always reflects current saved settings
+  useEffect(() => {
+    if (isOpen) {
+      const current = loadAIConfig();
+      const currentProv = current?.provider ?? 'gemini';
+      const currentModel = current?.model ?? PROVIDERS.find((p) => p.id === currentProv)?.defaultModel ?? '';
+      setProvider(currentProv);
+      setApiKey(current?.apiKey ?? '');
+      setModel(currentModel);
+      setLocalEndpoint(current?.localEndpoint ?? 'http://localhost:11434/v1');
+      setGhToken(getStoredGitHubToken());
+      setShowKey(false);
+      setSubmitError(null);
+
+      const curated = CURATED_MODELS[currentProv] || [];
+      setIsCustomModel(Boolean(currentModel && !curated.includes(currentModel)));
+    }
+  }, [isOpen]);
+
+  // Handle Escape key to close modal
+  useEffect(() => {
+    if (!isOpen || !onClose) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const meta = PROVIDERS.find((p) => p.id === provider)!;
   const { models, fetchState, fetchError } = useModelList(provider, apiKey, localEndpoint);
 
-  // When model list loads and current model is not in it, reset to first (if not in custom mode)
+  // When model list loads and current model is empty, select the saved or first model
   useEffect(() => {
-    if (!isCustomModel && fetchState === 'ok' && models.length > 0 && !models.includes(model)) {
-      setModel(models[0]);
+    if (!isCustomModel && fetchState === 'ok' && models.length > 0) {
+      if (!model) {
+        const current = loadAIConfig();
+        if (current?.provider === provider && current?.model && models.includes(current.model)) {
+          setModel(current.model);
+        } else {
+          setModel(models[0]);
+        }
+      }
     }
-  }, [fetchState, models, model, isCustomModel]);
+  }, [fetchState, models, model, isCustomModel, provider]);
 
   const handleProviderChange = (p: AIProviderType) => {
     setProvider(p);
-    setApiKey('');
-    setModel('');
-    setIsCustomModel(false);
+    const current = loadAIConfig();
+    if (current && current.provider === p) {
+      // Re-load the saved config for this provider if it was already saved
+      setApiKey(current.apiKey);
+      setModel(current.model || '');
+      const curated = CURATED_MODELS[p] || [];
+      setIsCustomModel(Boolean(current.model && !curated.includes(current.model)));
+    } else {
+      setApiKey('');
+      const defaultMod = PROVIDERS.find((x) => x.id === p)?.defaultModel || CURATED_MODELS[p]?.[0] || '';
+      setModel(defaultMod);
+      setIsCustomModel(false);
+    }
     setSubmitError(null);
   };
 
@@ -378,12 +427,25 @@ export function AIProviderModal({ isOpen, onConfirm }: AIProviderModalProps) {
         </p>
       )}
 
-      <button
-        type="submit"
-        className="w-full rounded-xl bg-[#FF5A5F] py-3 text-sm font-semibold text-white hover:bg-[#E0484D] transition-colors cursor-pointer"
-      >
-        {existing ? 'Update & Continue' : 'Save & Start Tracking'}
-      </button>
+      <div className="flex items-center gap-2.5 pt-1">
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-1/3 rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#0F172A] transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+        )}
+        <button
+          type="submit"
+          className={`rounded-xl bg-[#FF5A5F] py-3 text-sm font-semibold text-white hover:bg-[#E0484D] transition-colors cursor-pointer ${
+            onClose ? 'w-2/3' : 'w-full'
+          }`}
+        >
+          {existing ? 'Update & Continue' : 'Save & Start Tracking'}
+        </button>
+      </div>
     </form>
   );
 
@@ -394,28 +456,47 @@ export function AIProviderModal({ isOpen, onConfirm }: AIProviderModalProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && onClose) {
+              onClose();
+            }
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm overflow-y-auto"
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-7 shadow-2xl shadow-slate-900/15"
+            className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-2xl shadow-slate-900/15 max-h-[92vh] overflow-y-auto"
           >
             {/* Header */}
-            <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF5A5F]/10">
-                <Key className="h-5 w-5 text-[#FF5A5F]" />
+            <div className="mb-6 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF5A5F]/10 shrink-0">
+                  <Key className="h-5 w-5 text-[#FF5A5F]" />
+                </div>
+                <div>
+                  <h2 className="font-display text-lg font-bold text-[#0F172A]">
+                    Choose Your AI Provider
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    GitStory works with any major AI provider
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="font-display text-lg font-bold text-[#0F172A]">
-                  Choose Your AI Provider
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  GitStory works with any major AI provider
-                </p>
-              </div>
+
+              {onClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="-mr-1.5 -mt-1.5 rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer"
+                  aria-label="Close settings"
+                  title="Close (Esc)"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              )}
             </div>
 
             {/* Provider badges */}

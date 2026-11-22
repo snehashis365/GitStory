@@ -390,17 +390,16 @@ export default function App() {
         <AIProviderModal
           isOpen={showProviderModal}
           onConfirm={handleApplyAIConfig}
+          onClose={() => setShowProviderModal(false)}
         />
-        {!showProviderModal && (
-          <RepoLauncher
-            onSelectRepo={(repo) => void loadRepository(repo)}
-            recentRepos={recentRepos}
-            initialError={repoError}
-            isLoading={isLoadingRepo}
-            onChangeAI={() => setShowProviderModal(true)}
-            aiConfig={aiConfig}
-          />
-        )}
+        <RepoLauncher
+          onSelectRepo={(repo) => void loadRepository(repo)}
+          recentRepos={recentRepos}
+          initialError={repoError}
+          isLoading={isLoadingRepo}
+          onChangeAI={() => setShowProviderModal(true)}
+          aiConfig={aiConfig}
+        />
         <NotificationToastStack alerts={alerts} onDismiss={dismissAlert} />
       </>
     );
@@ -412,6 +411,7 @@ export default function App() {
       <AIProviderModal
         isOpen={showProviderModal}
         onConfirm={handleApplyAIConfig}
+        onClose={() => setShowProviderModal(false)}
       />
 
       {/* Strict 3-Zone Top Bar Contract */}
@@ -463,9 +463,9 @@ export default function App() {
                 type="button"
                 onClick={() => setShowProviderModal(true)}
                 title={`AI: ${aiConfig.provider} · ${aiConfig.model || 'default model'}`}
-                className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-[#F8FAFC] px-3 py-2 text-xs font-semibold text-slate-600 hover:border-[#FF5A5F]/40 hover:text-[#FF5A5F] transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-[#F8FAFC] px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-semibold text-slate-600 hover:border-[#FF5A5F]/40 hover:text-[#FF5A5F] transition-colors cursor-pointer"
               >
-                <Sparkles className="h-3.5 w-3.5" />
+                <Sparkles className="h-3.5 w-3.5 text-[#FF5A5F]" />
                 <span className="capitalize">{aiConfig.provider}</span>
               </button>
             )}
@@ -473,16 +473,16 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setShowProviderModal(true)}
-                className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer"
               >
-                <Sparkles className="h-3.5 w-3.5" />
+                <Sparkles className="h-3.5 w-3.5 text-amber-600" />
                 <span>Set AI Key</span>
               </button>
             )}
             <button
               type="button"
               onClick={() => setChatOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#FF5A5F] px-4 py-2 text-sm font-semibold text-white hover:bg-[#E0484D] transition-colors whitespace-nowrap cursor-pointer"
+              className="inline-flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#FF5A5F] px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-white hover:bg-[#E0484D] transition-colors whitespace-nowrap cursor-pointer"
             >
               <MessageCircle className="h-4 w-4" />
               <span>Ask AI Guide</span>

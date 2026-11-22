@@ -97,7 +97,7 @@ export function RepoLauncher({
               <button
                 type="button"
                 onClick={onChangeAI}
-                className={`hidden sm:inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-semibold transition-colors cursor-pointer ${
                   aiConfig
                     ? 'border-slate-200 bg-[#F8FAFC] text-slate-600 hover:border-[#FF5A5F]/40 hover:text-[#FF5A5F]'
                     : 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'
