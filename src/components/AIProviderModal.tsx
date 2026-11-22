@@ -32,6 +32,7 @@ const PROVIDERS: {
     placeholder: 'AIza...',
     docsUrl: 'https://aistudio.google.com/app/apikey',
     defaultModel: 'gemini-2.5-flash',
+    note: '🎁 Free API key available at Google AI Studio (no credit card needed). Works directly in browser & locally.',
   },
   {
     id: 'openai',
@@ -56,7 +57,7 @@ const PROVIDERS: {
     placeholder: 'nvapi-...',
     docsUrl: 'https://build.nvidia.com/explore/discover',
     defaultModel: 'meta/llama-3.1-70b-instruct',
-    note: 'Uses NVIDIA NIM API (OpenAI-compatible)',
+    note: '⚡ Works locally (npm run dev). On static GitHub Pages, direct requests are blocked by NVIDIA browser CORS.',
   },
   {
     id: 'local',
@@ -324,7 +325,7 @@ export function AIProviderModal({ isOpen, onConfirm }: AIProviderModalProps) {
             rel="noreferrer"
             className="inline-flex items-center gap-1 text-xs font-medium text-[#0D9488] hover:underline"
           >
-            Get key <ExternalLink className="h-3 w-3" />
+            {provider === 'gemini' ? 'Get free key' : 'Get key'} <ExternalLink className="h-3 w-3" />
           </a>
         </div>
         <div className="relative">
