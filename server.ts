@@ -42,7 +42,7 @@ async function callAI(cfg: AIRequestConfig): Promise<string> {
     const { GoogleGenAI, ThinkingLevel } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: model || 'gemini-2.0-flash',
+      model: model || 'gemini-2.5-flash',
       contents: userPrompt,
       config: {
         thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
@@ -134,7 +134,7 @@ async function streamAI(
       parts: [{ text: m.content }],
     }));
     const stream = await ai.models.generateContentStream({
-      model: model || 'gemini-2.0-flash',
+      model: model || 'gemini-2.5-flash',
       contents,
       config: { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }, systemInstruction: systemPrompt },
     });

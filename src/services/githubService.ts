@@ -90,7 +90,7 @@ async function githubFetch<T>(
   if (activeToken) {
     headers.Authorization = `Bearer ${activeToken}`;
   }
-  if (cached?.etag) {
+  if (cached?.etag && activeToken) {
     headers['If-None-Match'] = cached.etag;
   }
 
@@ -235,33 +235,35 @@ function buildVelocitySeries(commits: CommitItem[], mergedPRs: PullRequestItem[]
   });
 }
 
+export function isStaticDeployment(): boolean {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname;
+  return (
+    host.endsWith('github.io') ||
+    host.endsWith('pages.dev') ||
+    window.location.protocol === 'file:'
+  );
+}
+
 export async function fetchRepoSnapshot(
   rawRepo: string,
   options?: { forceSync?: boolean; token?: string }
 ): Promise<RepoSnapshot> {
   const forceSync = Boolean(options?.forceSync);
 
-  // 1. If backend server is available (e.g. local dev, Node proxy), use /api/github/repo
-  try {
-    const url = `/api/github/repo?repo=${encodeURIComponent(rawRepo)}${forceSync ? '&sync=1' : ''}`;
-    const resp = await fetch(url);
-    if (resp.ok) {
-      const data = (await resp.json()) as RepoSnapshot;
-      if (data && data.repo && data.commits) {
-        return data;
+  // 1. If backend server is available (local dev or Node proxy), use /api/github/repo
+  if (!isStaticDeployment()) {
+    try {
+      const url = `/api/github/repo?repo=${encodeURIComponent(rawRepo)}${forceSync ? '&sync=1' : ''}`;
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const data = (await resp.json()) as RepoSnapshot;
+        if (data && data.repo && data.commits) {
+          return data;
+        }
       }
-    } else if (resp.status !== 404 && resp.status !== 502) {
-      const err = (await resp.json().catch(() => ({}))) as { error?: string };
-      if (err.error) throw new Error(err.error);
-    }
-  } catch (err: unknown) {
-    if (
-      err instanceof Error &&
-      !err.message.includes('404') &&
-      !err.message.includes('Failed to fetch') &&
-      !err.message.includes('NetworkError')
-    ) {
-      throw err;
+    } catch {
+      // Fall through to direct fetch
     }
   }
 

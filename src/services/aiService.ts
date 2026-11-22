@@ -7,36 +7,84 @@ import type {
 } from '../types';
 
 export const DEFAULT_AI_MODELS: Record<AIProviderType, string> = {
-  gemini: 'gemini-2.0-flash',
+  gemini: 'gemini-2.5-flash',
   openai: 'gpt-4o-mini',
   anthropic: 'claude-3-5-haiku-latest',
   nvidia: 'meta/llama-3.1-70b-instruct',
   local: 'llama3',
 };
 
+export const CURATED_MODELS: Record<AIProviderType, string[]> = {
+  gemini: [
+    'gemini-2.5-flash',
+    'gemini-2.5-pro',
+    'gemini-1.5-flash',
+  ],
+  openai: [
+    'gpt-4o',
+    'gpt-4o-mini',
+    'o3-mini',
+    'o1',
+    'gpt-4-turbo',
+  ],
+  anthropic: [
+    'claude-3-7-sonnet-latest',
+    'claude-3-5-sonnet-latest',
+    'claude-3-5-haiku-latest',
+    'claude-3-opus-latest',
+  ],
+  nvidia: [
+    'meta/llama-3.3-70b-instruct',
+    'meta/llama-3.1-70b-instruct',
+    'meta/llama-3.1-405b-instruct',
+  ],
+  local: [
+    'llama3',
+    'mistral',
+    'qwen2.5-coder',
+  ],
+};
+
+export function isStaticDeployment(): boolean {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname;
+  return (
+    host.endsWith('github.io') ||
+    host.endsWith('pages.dev') ||
+    window.location.protocol === 'file:'
+  );
+}
+
 export async function fetchAvailableModels(
   provider: AIProviderType,
   apiKey: string,
   localEndpoint?: string
 ): Promise<string[]> {
-  // 1. Try backend server if available
-  try {
-    const headers: Record<string, string> = {
-      'x-ai-provider': provider,
-      'x-ai-key': apiKey.trim(),
-    };
-    if (localEndpoint?.trim()) headers['x-ai-endpoint'] = localEndpoint.trim();
+  // 1. Try backend server if NOT on static hosting (e.g. GitHub Pages)
+  if (!isStaticDeployment()) {
+    try {
+      const headers: Record<string, string> = {
+        'x-ai-provider': provider,
+        'x-ai-key': apiKey.trim(),
+      };
+      if (localEndpoint?.trim()) headers['x-ai-endpoint'] = localEndpoint.trim();
 
-    const resp = await fetch('/api/ai/models', { headers });
-    if (resp.ok) {
-      const data = (await resp.json()) as { models?: string[] };
-      if (Array.isArray(data.models)) return data.models;
+      const resp = await fetch('/api/ai/models', { headers });
+      if (resp.ok) {
+        const data = (await resp.json()) as { models?: string[] };
+        if (Array.isArray(data.models) && data.models.length > 0) return data.models;
+      }
+    } catch {
+      // Fall through to direct browser fetch
     }
-  } catch {
-    // Fall through to direct browser fetch
   }
 
-  return fetchAvailableModelsDirect(provider, apiKey, localEndpoint);
+  try {
+    return await fetchAvailableModelsDirect(provider, apiKey, localEndpoint);
+  } catch {
+    // If live fetch fails, fall back to rock-solid curated model list
+    return CURATED_MODELS[provider] || [];
+  }
 }
 
 export async function fetchAvailableModelsDirect(
@@ -54,7 +102,7 @@ export async function fetchAvailableModelsDirect(
   }
 
   if (provider === 'gemini') {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey.trim())}`;
     const resp = await fetch(url);
     if (!resp.ok) {
       const e = (await resp.json().catch(() => ({}))) as { error?: { message?: string } };
@@ -104,34 +152,26 @@ export async function generateStoryDigest(
   snapshot: RepoSnapshot,
   cfg: AIProviderConfig
 ): Promise<AiDigest> {
-  // 1. Try local/backend server endpoint if available
-  try {
-    const resp = await fetch('/api/ai/summarize', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-ai-provider': cfg.provider,
-        'x-ai-key': cfg.apiKey,
-        'x-ai-model': cfg.model ?? '',
-        ...(cfg.localEndpoint ? { 'x-ai-endpoint': cfg.localEndpoint } : {}),
-      },
-      body: JSON.stringify({ snapshot }),
-    });
-    if (resp.ok) {
-      const digest = (await resp.json()) as AiDigest;
-      if (digest && digest.headline) return digest;
-    } else if (resp.status !== 404 && resp.status !== 502) {
-      const errData = (await resp.json().catch(() => ({}))) as { error?: string };
-      if (errData.error) throw new Error(errData.error);
-    }
-  } catch (err: unknown) {
-    if (
-      err instanceof Error &&
-      !err.message.includes('404') &&
-      !err.message.includes('Failed to fetch') &&
-      !err.message.includes('NetworkError')
-    ) {
-      throw err;
+  // 1. Try local/backend server endpoint if NOT on static hosting
+  if (!isStaticDeployment()) {
+    try {
+      const resp = await fetch('/api/ai/summarize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-ai-provider': cfg.provider,
+          'x-ai-key': cfg.apiKey.trim(),
+          'x-ai-model': cfg.model ?? '',
+          ...(cfg.localEndpoint ? { 'x-ai-endpoint': cfg.localEndpoint } : {}),
+        },
+        body: JSON.stringify({ snapshot }),
+      });
+      if (resp.ok) {
+        const digest = (await resp.json()) as AiDigest;
+        if (digest && digest.headline) return digest;
+      }
+    } catch {
+      // Fall through to direct client-side fetch
     }
   }
 
@@ -145,7 +185,7 @@ export async function generateStoryDigestDirect(
 ): Promise<AiDigest> {
   const provider = cfg.provider;
   const apiKey = cfg.apiKey;
-  const model = cfg.model || DEFAULT_AI_MODELS[provider] || 'gemini-2.0-flash';
+  const model = cfg.model || DEFAULT_AI_MODELS[provider] || 'gemini-2.5-flash';
   const localEndpoint = cfg.localEndpoint;
 
   const commitsPayload = snapshot.commits.slice(0, 10).map((c) => ({
@@ -205,7 +245,7 @@ Respond with ONLY a valid JSON object (no markdown, no code fences) matching exa
   let rawJson = '';
 
   if (provider === 'gemini') {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -309,63 +349,58 @@ export async function streamAIChat(
   onChunk: (text: string) => void,
   signal?: AbortSignal
 ): Promise<void> {
-  // 1. Try local/backend server endpoint if available
-  try {
-    const resp = await fetch('/api/ai/chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-ai-provider': cfg.provider,
-        'x-ai-key': cfg.apiKey,
-        'x-ai-model': cfg.model ?? '',
-        ...(cfg.localEndpoint ? { 'x-ai-endpoint': cfg.localEndpoint } : {}),
-      },
-      body: JSON.stringify({
-        snapshot,
-        digest,
-        messages: chatHistory.map((m) => ({ role: m.role, content: m.content })),
-      }),
-      signal,
-    });
+  // 1. Try local/backend server endpoint if NOT on static hosting
+  if (!isStaticDeployment()) {
+    try {
+      const resp = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-ai-provider': cfg.provider,
+          'x-ai-key': cfg.apiKey.trim(),
+          'x-ai-model': cfg.model ?? '',
+          ...(cfg.localEndpoint ? { 'x-ai-endpoint': cfg.localEndpoint } : {}),
+        },
+        body: JSON.stringify({
+          snapshot,
+          digest,
+          messages: chatHistory.map((m) => ({ role: m.role, content: m.content })),
+        }),
+        signal,
+      });
 
-    if (resp.ok && resp.body) {
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
+      if (resp.ok && resp.body) {
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const events = buffer.split('\n\n');
-        buffer = events.pop() || '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split('\n\n');
+          buffer = events.pop() || '';
 
-        for (const ev of events) {
-          const line = ev.trim();
-          if (!line.startsWith('data:')) continue;
-          const payload = line.slice(5).trim();
-          if (payload === '[DONE]') continue;
-          try {
-            const parsed = JSON.parse(payload) as { text?: string; error?: string };
-            if (parsed.error) throw new Error(parsed.error);
-            if (parsed.text) onChunk(parsed.text);
-          } catch (parseErr) {
-            if (parseErr instanceof Error && parseErr.message !== 'Unexpected end of JSON input') {
-              throw parseErr;
+          for (const ev of events) {
+            const line = ev.trim();
+            if (!line.startsWith('data:')) continue;
+            const payload = line.slice(5).trim();
+            if (payload === '[DONE]') continue;
+            try {
+              const parsed = JSON.parse(payload) as { text?: string; error?: string };
+              if (parsed.error) throw new Error(parsed.error);
+              if (parsed.text) onChunk(parsed.text);
+            } catch (parseErr) {
+              if (parseErr instanceof Error && parseErr.message !== 'Unexpected end of JSON input') {
+                throw parseErr;
+              }
             }
           }
         }
+        return;
       }
-      return;
-    }
-  } catch (err: unknown) {
-    if (
-      err instanceof Error &&
-      !err.message.includes('404') &&
-      !err.message.includes('Failed to fetch') &&
-      !err.message.includes('NetworkError')
-    ) {
-      throw err;
+    } catch {
+      // Fall through to direct browser streaming
     }
   }
 
@@ -383,7 +418,7 @@ export async function streamAIChatDirect(
 ): Promise<void> {
   const provider = cfg.provider;
   const apiKey = cfg.apiKey;
-  const model = cfg.model || DEFAULT_AI_MODELS[provider] || 'gemini-2.0-flash';
+  const model = cfg.model || DEFAULT_AI_MODELS[provider] || 'gemini-2.5-flash';
   const localEndpoint = cfg.localEndpoint;
 
   const repoContext = `ACTIVE REPOSITORY: ${snapshot.repo.fullName}
@@ -408,7 +443,7 @@ Style rules:
 ${repoContext}`;
 
   if (provider === 'gemini') {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(apiKey.trim())}`;
     const contents = chatHistory.slice(-10).map((m) => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],

@@ -12,7 +12,7 @@ import {
   NvidiaIcon,
   LocalServerIcon,
 } from './BrandIcons';
-import { fetchAvailableModels } from '../services/aiService';
+import { fetchAvailableModels, CURATED_MODELS, DEFAULT_AI_MODELS } from '../services/aiService';
 import { getStoredGitHubToken, saveStoredGitHubToken } from '../services/githubService';
 
 // ─── Provider metadata ────────────────────────────────────────────────────────
@@ -31,7 +31,7 @@ const PROVIDERS: {
     icon: GoogleGeminiIcon,
     placeholder: 'AIza...',
     docsUrl: 'https://aistudio.google.com/app/apikey',
-    defaultModel: 'gemini-2.0-flash',
+    defaultModel: 'gemini-2.5-flash',
   },
   {
     id: 'openai',
@@ -95,25 +95,38 @@ export function clearAIConfig() {
 type FetchState = 'idle' | 'loading' | 'ok' | 'error';
 
 function useModelList(provider: AIProviderType, apiKey: string, localEndpoint: string) {
-  const [models, setModels] = useState<string[]>([]);
-  const [fetchState, setFetchState] = useState<FetchState>('idle');
+  const [models, setModels] = useState<string[]>(() => CURATED_MODELS[provider] || []);
+  const [fetchState, setFetchState] = useState<FetchState>('ok');
   const [fetchError, setFetchError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Sync curated models immediately when switching providers
+  useEffect(() => {
+    setModels(CURATED_MODELS[provider] || []);
+    setFetchState('ok');
+    setFetchError(null);
+  }, [provider]);
+
   const trigger = useCallback(() => {
-    // Anthropic: fetch immediately (no key validation needed for hardcoded list)
-    // Others: need a non-empty key (or non-empty endpoint for local)
-    const needsKey = provider !== 'local' && provider !== 'anthropic';
+    // Anthropic: already using curated list, no external call needed
+    if (provider === 'anthropic') {
+      setModels(CURATED_MODELS.anthropic);
+      setFetchState('ok');
+      setFetchError(null);
+      return;
+    }
+
+    const needsKey = provider !== 'local';
     if (needsKey && apiKey.trim().length < 10) {
-      setModels([]);
-      setFetchState('idle');
+      setModels(CURATED_MODELS[provider] || []);
+      setFetchState('ok');
       setFetchError(null);
       return;
     }
     if (provider === 'local' && !localEndpoint.trim()) {
-      setModels([]);
-      setFetchState('idle');
+      setModels(CURATED_MODELS.local || []);
+      setFetchState('ok');
       return;
     }
 
@@ -125,21 +138,25 @@ function useModelList(provider: AIProviderType, apiKey: string, localEndpoint: s
 
       setFetchState('loading');
       setFetchError(null);
-      setModels([]);
 
       try {
         const fetched = await fetchAvailableModels(provider, apiKey.trim(), localEndpoint.trim());
-        setModels(fetched);
+        if (Array.isArray(fetched) && fetched.length > 0) {
+          setModels(fetched);
+        } else {
+          setModels(CURATED_MODELS[provider] || []);
+        }
         setFetchState('ok');
       } catch (err: unknown) {
         if ((err as Error).name === 'AbortError') return;
-        setFetchError((err as Error).message || 'Failed to load models');
-        setFetchState('error');
+        // Gracefully keep curated models on error so user is never blocked
+        setModels(CURATED_MODELS[provider] || []);
+        setFetchState('ok');
       }
     }, 700); // 700 ms debounce
   }, [provider, apiKey, localEndpoint]);
 
-  // Auto-trigger when provider changes (Anthropic uses hardcoded list — fetch right away)
+  // Auto-trigger when provider, apiKey, or localEndpoint change
   useEffect(() => {
     trigger();
     return () => {
@@ -225,7 +242,7 @@ export function AIProviderModal({ isOpen, onConfirm }: AIProviderModalProps) {
         {fetchState === 'ok' && models.length > 0 && (
           <span className="inline-flex items-center gap-1 text-xs text-[#0D9488]">
             <CheckCircle2 className="h-3 w-3" />
-            {models.length} models found
+            {models.length} models available
           </span>
         )}
         {fetchState === 'error' && (
@@ -274,7 +291,7 @@ export function AIProviderModal({ isOpen, onConfirm }: AIProviderModalProps) {
       )}
       <p className="text-xs text-slate-400">
         {fetchState === 'ok' && models.length > 0
-          ? 'Select from the models available on your account.'
+          ? 'Select from curated or active models for this provider.'
           : 'Enter a valid API key above to auto-populate the model list.'}
       </p>
     </div>
