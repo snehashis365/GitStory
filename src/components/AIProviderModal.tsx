@@ -12,7 +12,7 @@ import {
   NvidiaIcon,
   LocalServerIcon,
 } from './BrandIcons';
-import { fetchAvailableModels, CURATED_MODELS, DEFAULT_AI_MODELS } from '../services/aiService';
+import { fetchAvailableModels, CURATED_MODELS, DEFAULT_AI_MODELS, isStaticDeployment } from '../services/aiService';
 import { getStoredGitHubToken, saveStoredGitHubToken } from '../services/githubService';
 
 // ─── Provider metadata ────────────────────────────────────────────────────────
@@ -183,23 +183,25 @@ export function AIProviderModal({ isOpen, onConfirm }: AIProviderModalProps) {
     existing?.localEndpoint ?? 'http://localhost:11434/v1'
   );
   const [showKey, setShowKey] = useState(false);
+  const [isCustomModel, setIsCustomModel] = useState(false);
   const [ghToken, setGhToken] = useState(() => getStoredGitHubToken());
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const meta = PROVIDERS.find((p) => p.id === provider)!;
   const { models, fetchState, fetchError } = useModelList(provider, apiKey, localEndpoint);
 
-  // When model list loads and current model is not in it, reset to first
+  // When model list loads and current model is not in it, reset to first (if not in custom mode)
   useEffect(() => {
-    if (fetchState === 'ok' && models.length > 0 && !models.includes(model)) {
+    if (!isCustomModel && fetchState === 'ok' && models.length > 0 && !models.includes(model)) {
       setModel(models[0]);
     }
-  }, [fetchState, models, model]);
+  }, [fetchState, models, model, isCustomModel]);
 
   const handleProviderChange = (p: AIProviderType) => {
     setProvider(p);
     setApiKey('');
     setModel('');
+    setIsCustomModel(false);
     setSubmitError(null);
   };
 
@@ -233,27 +235,30 @@ export function AIProviderModal({ isOpen, onConfirm }: AIProviderModalProps) {
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
         <label className="text-sm font-semibold text-[#0F172A]">Model</label>
-        {fetchState === 'loading' && (
-          <span className="inline-flex items-center gap-1 text-xs text-slate-400">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            Fetching models…
-          </span>
-        )}
-        {fetchState === 'ok' && models.length > 0 && (
-          <span className="inline-flex items-center gap-1 text-xs text-[#0D9488]">
-            <CheckCircle2 className="h-3 w-3" />
-            {models.length} models available
-          </span>
-        )}
-        {fetchState === 'error' && (
-          <span className="inline-flex items-center gap-1 text-xs text-amber-600">
-            <AlertCircle className="h-3 w-3" />
-            {fetchError}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {fetchState === 'loading' && (
+            <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Fetching…
+            </span>
+          )}
+          {fetchState === 'ok' && models.length > 0 && !isCustomModel && (
+            <span className="inline-flex items-center gap-1 text-xs text-[#0D9488]">
+              <CheckCircle2 className="h-3 w-3" />
+              {models.length} models
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setIsCustomModel((v) => !v)}
+            className="text-xs font-medium text-[#FF5A5F] hover:underline cursor-pointer"
+          >
+            {isCustomModel ? 'Pick from list' : 'Custom model ID'}
+          </button>
+        </div>
       </div>
 
-      {fetchState === 'ok' && models.length > 0 ? (
+      {!isCustomModel && fetchState === 'ok' && models.length > 0 ? (
         // ── Dropdown populated from API ──
         <div className="relative">
           <select
@@ -276,23 +281,17 @@ export function AIProviderModal({ isOpen, onConfirm }: AIProviderModalProps) {
             type="text"
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            placeholder={
-              fetchState === 'loading'
-                ? 'Loading available models…'
-                : meta.defaultModel
-            }
-            disabled={fetchState === 'loading'}
-            className="w-full rounded-xl border border-slate-200 bg-[#F8FAFC] px-4 py-3 text-sm font-mono text-[#0F172A] placeholder:text-slate-400 focus:border-[#FF5A5F] focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20 disabled:opacity-60"
+            placeholder={meta.defaultModel}
+            className="w-full rounded-xl border border-slate-200 bg-[#F8FAFC] px-4 py-3 text-sm font-mono text-[#0F172A] placeholder:text-slate-400 focus:border-[#FF5A5F] focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20"
           />
-          {fetchState === 'loading' && (
-            <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
-          )}
         </div>
       )}
       <p className="text-xs text-slate-400">
-        {fetchState === 'ok' && models.length > 0
-          ? 'Select from curated or active models for this provider.'
-          : 'Enter a valid API key above to auto-populate the model list.'}
+        {isCustomModel
+          ? 'Enter any valid model ID supported by your account.'
+          : fetchState === 'ok' && models.length > 0
+            ? 'Select from curated or active models for this provider.'
+            : 'Enter a valid API key above to auto-populate the model list.'}
       </p>
     </div>
   );
@@ -446,6 +445,21 @@ export function AIProviderModal({ isOpen, onConfirm }: AIProviderModalProps) {
               <p className="mb-4 rounded-xl border border-slate-100 bg-[#F8FAFC] px-3 py-2 text-xs text-slate-500">
                 {meta.note}
               </p>
+            )}
+
+            {isStaticDeployment() && provider === 'nvidia' && (
+              <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50/90 p-3 text-xs text-amber-900 space-y-1">
+                <div className="flex items-center gap-1.5 font-semibold text-amber-800">
+                  <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>Browser CORS Notice for NVIDIA NIM</span>
+                </div>
+                <p className="leading-relaxed">
+                  NVIDIA NIM’s gateway does not return browser CORS headers. Web browsers block direct client-side requests on static hosts like GitHub Pages.
+                </p>
+                <p className="leading-relaxed font-medium text-amber-800">
+                  💡 For GitHub Pages, <strong>Google Gemini</strong> or <strong>OpenAI</strong> work directly in the browser. Run GitStory locally via <code>npm run dev</code> for full NVIDIA NIM proxy support.
+                </p>
+              </div>
             )}
 
             {form}
