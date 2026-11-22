@@ -16,6 +16,8 @@ export interface RepoMetadata {
   avatarUrl: string;
   topics: string[];
   license: string | null;
+  totalCommits?: number;
+  totalPRs?: number;
 }
 
 export interface CommitItem {

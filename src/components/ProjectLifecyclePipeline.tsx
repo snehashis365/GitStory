@@ -71,8 +71,13 @@ export function ProjectLifecyclePipeline({
         badge: 'bg-rose-500 text-white',
       },
       metrics: [
-        { label: 'Recent Commits', value: String(snapshot.commits.length) },
-        { label: 'Latest Commit', value: `@${snapshot.commits[0]?.authorLogin || 'team'}` },
+        {
+          label: 'Total Commits',
+          value: snapshot.repo.totalCommits
+            ? formatCompactNumber(snapshot.repo.totalCommits)
+            : `${snapshot.commits.length}+`,
+        },
+        { label: 'Latest Batch', value: `${snapshot.commits.length} synced` },
       ],
       description:
         digest?.lifecycleStageBriefs?.commits ||
@@ -93,8 +98,13 @@ export function ProjectLifecyclePipeline({
         badge: 'bg-teal-600 text-white',
       },
       metrics: [
-        { label: 'Merged PRs', value: String(snapshot.mergedPRs.length) },
-        { label: 'Last Merged', value: formatRelativeTime(snapshot.mergedPRs[0]?.mergedAt) },
+        {
+          label: 'Total PRs',
+          value: snapshot.repo.totalPRs
+            ? formatCompactNumber(snapshot.repo.totalPRs)
+            : `${snapshot.mergedPRs.length}+`,
+        },
+        { label: 'Latest Merged', value: `${snapshot.mergedPRs.length} synced` },
       ],
       description:
         digest?.lifecycleStageBriefs?.prs ||

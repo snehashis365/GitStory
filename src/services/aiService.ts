@@ -195,7 +195,7 @@ export async function generateStoryDigestDirect(
   const model = cfg.model || DEFAULT_AI_MODELS[provider] || 'gemini-2.5-flash';
   const localEndpoint = cfg.localEndpoint;
 
-  const commitsPayload = snapshot.commits.slice(0, 10).map((c) => ({
+  const commitsPayload = snapshot.commits.slice(0, 15).map((c) => ({
     sha: c.shortSha,
     author: c.authorLogin,
     message: c.firstLine,
@@ -430,11 +430,11 @@ export async function streamAIChatDirect(
 
   const repoContext = `ACTIVE REPOSITORY: ${snapshot.repo.fullName}
 Description: ${snapshot.repo.description}
-Stats: ${snapshot.repo.stars.toLocaleString()} stars, ${snapshot.repo.forks.toLocaleString()} forks, ${snapshot.repo.openIssues.toLocaleString()} open issues, primary language: ${snapshot.repo.language}.
+Stats: ${snapshot.repo.stars.toLocaleString()} stars, ${snapshot.repo.forks.toLocaleString()} forks, ${snapshot.repo.openIssues.toLocaleString()} open issues, ${snapshot.repo.totalCommits ? `${snapshot.repo.totalCommits.toLocaleString()} total commits, ` : ''}${snapshot.repo.totalPRs ? `${snapshot.repo.totalPRs.toLocaleString()} total PRs, ` : ''}primary language: ${snapshot.repo.language}.
 Latest Release: ${snapshot.releases[0] ? `${snapshot.releases[0].tagName} (${snapshot.releases[0].name}) on ${snapshot.releases[0].publishedAt.slice(0, 10)}\nNotes: ${snapshot.releases[0].body.slice(0, 900)}` : 'None published yet.'}
 Top Contributors: ${snapshot.contributors.map((c) => `${c.login} (${c.contributions} contributions)`).join(', ')}
 Recent Commits:
-${snapshot.commits.slice(0, 12).map((c) => `- [${c.shortSha}] (${c.date.slice(0, 10)}) by ${c.authorLogin}: ${c.firstLine}`).join('\n')}
+${snapshot.commits.slice(0, 15).map((c) => `- [${c.shortSha}] (${c.date.slice(0, 10)}) by ${c.authorLogin}: ${c.firstLine}`).join('\n')}
 Recently Merged PRs:
 ${snapshot.mergedPRs.slice(0, 8).map((p) => `- #${p.number} (${p.mergedAt.slice(0, 10)}) by ${p.userLogin}: ${p.title}`).join('\n')}
 ${digest ? `Current AI Community Briefing: ${digest.headline} — ${digest.playfulSummary}` : ''}`;

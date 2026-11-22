@@ -80,7 +80,7 @@ export function ActivityFeed({
     );
     const prMap = new Map((digest?.prTranslations || []).map((t) => [t.number, t]));
 
-    const commits: SimplifiedEntry[] = snapshot.commits.slice(0, 10).map((c) => {
+    const commits: SimplifiedEntry[] = snapshot.commits.slice(0, 15).map((c) => {
       const tr = commitMap.get(c.shortSha.toLowerCase());
       return {
         id: `commit-${c.sha}`,
@@ -468,7 +468,7 @@ export function ActivityFeed({
                 [
                   { id: 'all', label: 'All' },
                   { id: 'prs', label: `Merged PRs (${snapshot.mergedPRs.length})` },
-                  { id: 'commits', label: `Commits (${snapshot.commits.slice(0, 10).length})` },
+                  { id: 'commits', label: `Commits (${snapshot.commits.length})` },
                 ] as const
               ).map((tab) => (
                 <button

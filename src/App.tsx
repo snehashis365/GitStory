@@ -5,7 +5,9 @@ import {
   Bell,
   BellRing,
   ExternalLink,
+  GitCommitHorizontal,
   GitFork,
+  GitMerge,
   MessageCircle,
   PartyPopper,
   Pause,
@@ -745,7 +747,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="mt-7 grid grid-cols-2 gap-4 border-t border-slate-100 pt-6 sm:grid-cols-4">
+          <div className="mt-7 grid grid-cols-2 gap-4 border-t border-slate-100 pt-6 sm:grid-cols-3 lg:grid-cols-6">
             <div>
               <p className="text-xs font-medium text-slate-500">Community Stars</p>
               <p className="mt-1 flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-[#0F172A]">
@@ -759,6 +761,22 @@ export default function App() {
               <p className="mt-1 flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-[#0F172A]">
                 <GitFork className="h-5 w-5 text-[#0D9488]" />
                 {formatCompactNumber(snapshot.repo.forks)}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-medium text-slate-500">Total Commits</p>
+              <p className="mt-1 flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-[#0F172A]">
+                <GitCommitHorizontal className="h-5 w-5 text-[#FF5A5F]" />
+                {formatCompactNumber(snapshot.repo.totalCommits || snapshot.commits.length)}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-medium text-slate-500">Total Pull Requests</p>
+              <p className="mt-1 flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-[#0F172A]">
+                <GitMerge className="h-5 w-5 text-[#8B5CF6]" />
+                {formatCompactNumber(snapshot.repo.totalPRs || snapshot.mergedPRs.length)}
               </p>
             </div>
 

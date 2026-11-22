@@ -32,7 +32,7 @@ const STEPS: StepInfo[] = [
   {
     id: 1,
     label: 'Ingesting Activity',
-    subtitle: 'Clustering recent commits & merged pull requests',
+    subtitle: 'Clustering latest commits & merged pull requests',
     threshold: 25,
     icon: GitCommitHorizontal,
   },
@@ -176,8 +176,8 @@ export function StoryGenerationProgress({
               </span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Transforming {snapshot.commits.length} commits &amp; {snapshot.mergedPRs.length} PRs
-              into plain-English stories
+              Transforming latest {snapshot.commits.length} commits &amp; {snapshot.mergedPRs.length} PRs
+              {snapshot.repo.totalCommits ? ` (out of ${snapshot.repo.totalCommits.toLocaleString()} total commits)` : ''} into plain-English stories
               {provider ? ` via ${provider}${model ? ` (${model})` : ''}` : ''}
             </p>
           </div>

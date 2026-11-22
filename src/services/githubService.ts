@@ -59,17 +59,39 @@ interface CacheEntry<T> {
   data: T;
   fetchedAt: number;
   rateLimitRemaining: number | null;
+  linkHeader?: string | null;
 }
 
 const memoryGhCache = new Map<string, CacheEntry<unknown>>();
 const snapshotCache = new Map<string, { snapshot: RepoSnapshot; fetchedAt: number }>();
 const ENDPOINT_CACHE_TTL_MS = 180_000; // 3 minutes
 
+export function parseLastPage(linkHeader: string | null | undefined): number | null {
+  if (!linkHeader) return null;
+  const parts = linkHeader.split(',');
+  for (const part of parts) {
+    if (part.includes('rel="last"')) {
+      const match = part.match(/[?&]page=(\d+)/);
+      if (match && match[1]) {
+        const parsed = parseInt(match[1], 10);
+        if (!Number.isNaN(parsed) && parsed > 0) return parsed;
+      }
+    }
+  }
+  return null;
+}
+
 async function githubFetch<T>(
   url: string,
   token?: string,
   forceConditionalCheck = false
-): Promise<{ data: T; fromCache: boolean; notModified: boolean; rateLimitRemaining: number | null }> {
+): Promise<{
+  data: T;
+  fromCache: boolean;
+  notModified: boolean;
+  rateLimitRemaining: number | null;
+  linkHeader: string | null;
+}> {
   const cached = memoryGhCache.get(url) as CacheEntry<T> | undefined;
   const now = Date.now();
 
@@ -79,6 +101,7 @@ async function githubFetch<T>(
       fromCache: true,
       notModified: false,
       rateLimitRemaining: cached.rateLimitRemaining,
+      linkHeader: cached.linkHeader ?? null,
     };
   }
 
@@ -97,6 +120,7 @@ async function githubFetch<T>(
   const resp = await fetch(url, { headers });
   const remainingHeader = resp.headers.get('x-ratelimit-remaining');
   const rateLimitRemaining = remainingHeader !== null ? Number(remainingHeader) : null;
+  const linkHeader = resp.headers.get('link');
 
   if (resp.status === 304 && cached) {
     cached.fetchedAt = now;
@@ -106,6 +130,7 @@ async function githubFetch<T>(
       fromCache: true,
       notModified: true,
       rateLimitRemaining,
+      linkHeader: cached.linkHeader ?? null,
     };
   }
 
@@ -124,6 +149,7 @@ async function githubFetch<T>(
           fromCache: true,
           notModified: false,
           rateLimitRemaining: 0,
+          linkHeader: cached.linkHeader ?? null,
         };
       }
       const err = new Error(
@@ -146,9 +172,16 @@ async function githubFetch<T>(
     data,
     fetchedAt: now,
     rateLimitRemaining,
+    linkHeader,
   });
 
-  return { data, fromCache: false, notModified: false, rateLimitRemaining };
+  return {
+    data,
+    fromCache: false,
+    notModified: false,
+    rateLimitRemaining,
+    linkHeader,
+  };
 }
 
 function buildVelocitySeries(commits: CommitItem[], mergedPRs: PullRequestItem[]): VelocityPoint[] {
@@ -318,9 +351,17 @@ export async function fetchRepoSnapshotDirect(
     }
   }
 
-  const [repoRes, commitsRes, pullsRes, releasesRes, contribRes] = await Promise.all([
+  const [
+    repoRes,
+    commitsRes,
+    pullsRes,
+    releasesRes,
+    contribRes,
+    totalCommitsRes,
+    totalPullsRes,
+  ] = await Promise.all([
     githubFetch<Record<string, unknown>>(base, token, forceSync),
-    githubFetch<Record<string, unknown>[]>(`${base}/commits?per_page=14`, token, forceSync),
+    githubFetch<Record<string, unknown>[]>(`${base}/commits?per_page=15`, token, forceSync),
     githubFetch<Record<string, unknown>[]>(
       `${base}/pulls?state=closed&sort=updated&direction=desc&per_page=16`,
       token,
@@ -330,6 +371,7 @@ export async function fetchRepoSnapshotDirect(
       fromCache: false,
       notModified: false,
       rateLimitRemaining: null,
+      linkHeader: null,
     })),
     githubFetch<Record<string, unknown>[]>(`${base}/releases?per_page=5`, token, forceSync).catch(
       () => ({
@@ -337,6 +379,7 @@ export async function fetchRepoSnapshotDirect(
         fromCache: false,
         notModified: false,
         rateLimitRemaining: null,
+        linkHeader: null,
       })
     ),
     githubFetch<Record<string, unknown>[]>(
@@ -348,6 +391,29 @@ export async function fetchRepoSnapshotDirect(
       fromCache: false,
       notModified: false,
       rateLimitRemaining: null,
+      linkHeader: null,
+    })),
+    githubFetch<Record<string, unknown>[]>(
+      `${base}/commits?per_page=1`,
+      token,
+      forceSync
+    ).catch(() => ({
+      data: [] as Record<string, unknown>[],
+      fromCache: false,
+      notModified: false,
+      rateLimitRemaining: null,
+      linkHeader: null,
+    })),
+    githubFetch<Record<string, unknown>[]>(
+      `${base}/pulls?state=all&per_page=1`,
+      token,
+      forceSync
+    ).catch(() => ({
+      data: [] as Record<string, unknown>[],
+      fromCache: false,
+      notModified: false,
+      rateLimitRemaining: null,
+      linkHeader: null,
     })),
   ]);
 
@@ -393,6 +459,16 @@ export async function fetchRepoSnapshotDirect(
       };
     });
 
+  const totalCommitsParsed = parseLastPage(totalCommitsRes.linkHeader);
+  const totalCommits =
+    totalCommitsParsed ??
+    (totalCommitsRes.data?.length ? totalCommitsRes.data.length : allCommits.length);
+
+  const totalPRsParsed = parseLastPage(totalPullsRes.linkHeader);
+  const totalPRs =
+    totalPRsParsed ??
+    (totalPullsRes.data?.length ? totalPullsRes.data.length : mergedPRs.length);
+
   const releases: ReleaseItem[] = (releasesRes.data || []).slice(0, 5).map((rel) => {
     const author = (rel.author as Record<string, unknown>) || {};
     return {
@@ -434,8 +510,10 @@ export async function fetchRepoSnapshotDirect(
       avatarUrl: String(ownerObj.avatar_url || ''),
       topics: Array.isArray(r.topics) ? (r.topics as string[]).slice(0, 6) : [],
       license: licenseObj ? String(licenseObj.spdx_id || licenseObj.name || '') : null,
+      totalCommits: Math.max(totalCommits, allCommits.length),
+      totalPRs: Math.max(totalPRs, mergedPRs.length),
     },
-    commits: allCommits.slice(0, 14),
+    commits: allCommits.slice(0, 15),
     mergedPRs,
     releases,
     contributors,
