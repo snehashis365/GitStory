@@ -28,26 +28,9 @@
     <!-- Text Gradients -->
     <linearGradient id="title-grad" x1="0" y1="0" x2="420" y2="0" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#FFFFFF"/>
-      <stop offset="45%" stop-color="#FFFFFF"/>
-      <stop offset="80%" stop-color="#FF5A5F"/>
+      <stop offset="50%" stop-color="#FFFFFF"/>
+      <stop offset="82%" stop-color="#FF5A5F"/>
       <stop offset="100%" stop-color="#FFA8A0"/>
-    </linearGradient>
-
-    <linearGradient id="badge-grad" x1="0" y1="0" x2="200" y2="0" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#0D9488"/>
-      <stop offset="100%" stop-color="#2DD4BF"/>
-    </linearGradient>
-
-    <linearGradient id="wire-commits" x1="0" y1="0" x2="380" y2="0" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#FF5A5F" stop-opacity="0.2"/>
-      <stop offset="50%" stop-color="#FF5A5F"/>
-      <stop offset="100%" stop-color="#FF5A5F" stop-opacity="0.3"/>
-    </linearGradient>
-
-    <linearGradient id="wire-prs" x1="0" y1="0" x2="380" y2="0" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#0D9488" stop-opacity="0.2"/>
-      <stop offset="50%" stop-color="#0D9488"/>
-      <stop offset="100%" stop-color="#2DD4BF" stop-opacity="0.3"/>
     </linearGradient>
 
     <!-- Grid Pattern -->
@@ -57,18 +40,9 @@
 
     <!-- Animations -->
     <style>
-      @keyframes pulse-ring {
-        0% { transform: scale(0.92); opacity: 0.8; }
-        50% { transform: scale(1.15); opacity: 0.2; }
-        100% { transform: scale(0.92); opacity: 0.8; }
-      }
       @keyframes float-slow {
         0%, 100% { transform: translateY(0px); }
         50% { transform: translateY(-7px); }
-      }
-      @keyframes float-reverse {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(6px); }
       }
       @keyframes dash-flow {
         0% { stroke-dashoffset: 200; }
@@ -82,16 +56,11 @@
         0%, 100% { opacity: 0.2; transform: scale(0.85); }
         50% { opacity: 1; transform: scale(1.2); }
       }
-      @keyframes node-pulse {
-        0%, 100% { r: 5; }
-        50% { r: 7.5; }
-      }
       @keyframes beacon {
         0% { r: 3; opacity: 1; }
         100% { r: 9; opacity: 0; }
       }
       .anim-float { animation: float-slow 5s ease-in-out infinite; }
-      .anim-float-rev { animation: float-reverse 6s ease-in-out infinite; }
       .anim-dash { stroke-dasharray: 8 6; animation: dash-flow 8s linear infinite; }
       .anim-glow { animation: glow-breathe 4s ease-in-out infinite; }
       .star-1 { animation: twinkle 3.2s ease-in-out infinite; transform-origin: 940px 80px; }
@@ -114,59 +83,61 @@
 
   <!-- Background Decorative Code/Commit Matrix (Subtle) -->
   <g opacity="0.12" font-family="JetBrains Mono, SFMono-Regular, monospace" font-size="11" fill="#94A3B8">
-    <text x="80" y="60">git checkout -b community-story</text>
-    <text x="80" y="80">✓ Synthesizing 28 commits &amp; 9 merged PRs...</text>
-    <text x="80" y="100">→ Momentum: Building Steadily 🚀 (84% to Next Release)</text>
+    <text x="80" y="52">git checkout -b community-story</text>
+    <text x="80" y="72">✓ Synthesizing 28 commits &amp; 9 merged PRs...</text>
   </g>
 
   <!-- ========================================================================= -->
   <!-- LEFT COLUMN: Brand Identity & Value Statement                              -->
   <!-- ========================================================================= -->
-  <g transform="translate(80, 130)">
+  <g transform="translate(80, 88)">
     <!-- Top Pill: Live Intelligence -->
     <g transform="translate(0, 0)">
-      <rect width="210" height="30" rx="15" fill="#1E293B" fill-opacity="0.9" stroke="#334155" stroke-width="1"/>
+      <rect width="228" height="30" rx="15" fill="#1E293B" fill-opacity="0.9" stroke="#334155" stroke-width="1"/>
       <!-- Animated Status Beacon -->
       <circle cx="16" cy="15" r="4" fill="#10B981"/>
       <circle cx="16" cy="15" r="4" stroke="#10B981" stroke-width="1.5" fill="none" class="beacon-ring"/>
       <circle cx="16" cy="15" r="4" stroke="#10B981" stroke-width="1.5" fill="none" class="beacon-ring-2"/>
-      <text x="28" y="19" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#94A3B8" letter-spacing="0.5">OPEN-SOURCE INTELLIGENCE</text>
+      <text x="29" y="19.5" font-family="system-ui, -apple-system, sans-serif" font-size="10.5" font-weight="700" fill="#94A3B8" letter-spacing="0.6">OPEN-SOURCE INTELLIGENCE</text>
     </g>
 
-    <!-- Main Title with Gradient -->
-    <g transform="translate(0, 68)">
-      <text font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="900" fill="url(#title-grad)" letter-spacing="-1.5">
+    <!-- Main Title with Generous Breathing Room from Top Pill -->
+    <g transform="translate(0, 84)">
+      <text font-family="system-ui, -apple-system, sans-serif" font-size="50" font-weight="900" fill="url(#title-grad)" letter-spacing="-1.2">
         GitStory
       </text>
       <!-- Sub-tagline -->
-      <text y="38" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="600" fill="#E2E8F0" letter-spacing="-0.3">
+      <text y="40" font-family="system-ui, -apple-system, sans-serif" font-size="19" font-weight="600" fill="#E2E8F0" letter-spacing="-0.3">
         Turn raw GitHub repos into clear progress stories
       </text>
       <!-- Paragraph -->
-      <text y="70" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="400" fill="#94A3B8">
+      <text y="72" font-family="system-ui, -apple-system, sans-serif" font-size="13.5" font-weight="400" fill="#94A3B8">
         AI progress chapters, 4-stage lifecycle flow, and non-technical
       </text>
-      <text y="92" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="400" fill="#94A3B8">
+      <text y="94" font-family="system-ui, -apple-system, sans-serif" font-size="13.5" font-weight="400" fill="#94A3B8">
         project intelligence for fans, founders, stakeholders, and builders.
       </text>
     </g>
 
     <!-- Interactive Capability Pills -->
-    <g transform="translate(0, 202)">
+    <g transform="translate(0, 224)">
       <!-- Pill 1: AI Stories -->
       <g>
-        <rect width="144" height="32" rx="16" fill="#1E293B" stroke="#334155" stroke-width="1"/>
-        <text x="14" y="20" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#F8FAFC">✨ AI Story Chapters</text>
+        <rect width="160" height="32" rx="16" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+        <text x="16" y="20.5" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#F8FAFC">✨ AI Story Chapters</text>
       </g>
       <!-- Pill 2: 4-Stage Lifecycle Flow -->
-      <g transform="translate(152, 0)">
-        <rect width="168" height="32" rx="16" fill="#1E293B" stroke="#334155" stroke-width="1"/>
-        <text x="14" y="20" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#F8FAFC">⚡ 2D Lifecycle Flow</text>
+      <g transform="translate(170, 0)">
+        <rect width="170" height="32" rx="16" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+        <text x="16" y="20.5" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#F8FAFC">⚡ 2D Lifecycle Flow</text>
       </g>
       <!-- Pill 3: Project 101 README -->
-      <g transform="translate(328, 0)">
-        <rect width="170" height="32" rx="16" fill="#1E293B" stroke="#334155" stroke-width="1"/>
-        <text x="14" y="20" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#2DD4BF">📖 Project 101 Primer</text>
+      <g transform="translate(350, 0)">
+        <rect width="180" height="32" rx="16" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+        <!-- Clean Book Icon + Text to prevent glyph rendering glitches -->
+        <path d="M16 12 C18 10.5, 21 10.5, 23 12 L23 21 C21 19.5, 18 19.5, 16 21 Z" fill="#2DD4BF" fill-opacity="0.8"/>
+        <path d="M23 12 C25 10.5, 28 10.5, 30 12 L30 21 C28 19.5, 25 19.5, 23 21 Z" fill="#2DD4BF"/>
+        <text x="36" y="20.5" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#2DD4BF">Project 101 Primer</text>
       </g>
     </g>
   </g>
@@ -183,38 +154,41 @@
       <circle cx="6" cy="6" r="4.5" fill="#EF4444" fill-opacity="0.8"/>
       <circle cx="22" cy="6" r="4.5" fill="#F59E0B" fill-opacity="0.8"/>
       <circle cx="38" cy="6" r="4.5" fill="#10B981" fill-opacity="0.8"/>
-      <text x="60" y="10" font-family="JetBrains Mono, monospace" font-size="11" font-weight="600" fill="#64748B">pipeline.lifecycle.flow</text>
+      <text x="56" y="10" font-family="JetBrains Mono, monospace" font-size="11" font-weight="600" fill="#64748B">pipeline.lifecycle.flow</text>
 
-      <rect x="290" y="-3" width="110" height="20" rx="10" fill="#1E293B" stroke="#334155" stroke-width="1"/>
-      <text x="302" y="11" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#0D9488">● AUTO-SYNC 60s</text>
+      <!-- Centered, Non-Clipping Auto-Sync Badge -->
+      <g transform="translate(276, -4)">
+        <rect width="128" height="22" rx="11" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+        <text x="64" y="14.5" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9.5" font-weight="700" fill="#0D9488">● AUTO-SYNC 60s</text>
+      </g>
     </g>
 
     <!-- Main Git Branching Tracks -->
-    <g transform="translate(30, 75)">
+    <g transform="translate(25, 75)">
       <!-- Master Branch Trunk -->
-      <line x1="20" y1="90" x2="360" y2="90" stroke="#334155" stroke-width="3" stroke-linecap="round"/>
+      <line x1="20" y1="90" x2="350" y2="90" stroke="#334155" stroke-width="3" stroke-linecap="round"/>
 
       <!-- Feature Branch Curving Out & Back In -->
-      <path d="M 50 90 C 80 90, 95 35, 140 35 L 240 35 C 280 35, 295 90, 325 90" 
+      <path d="M 45 90 C 75 90, 90 35, 135 35 L 235 35 C 275 35, 290 90, 320 90" 
             stroke="#FF5A5F" stroke-width="2.5" fill="none" stroke-linecap="round" class="anim-dash"/>
 
       <!-- Release Branch Curving Out Downward -->
-      <path d="M 120 90 C 150 90, 165 145, 210 145 L 300 145 C 330 145, 345 90, 360 90" 
+      <path d="M 115 90 C 145 90, 160 145, 205 145 L 290 145 C 320 145, 335 90, 350 90" 
             stroke="#0D9488" stroke-width="2.5" fill="none" stroke-linecap="round" class="anim-dash"/>
 
       <!-- Stage 1 Node: Active Coding -->
-      <g transform="translate(50, 90)">
+      <g transform="translate(45, 90)">
         <circle cx="0" cy="0" r="14" fill="#1E293B" stroke="#FF5A5F" stroke-width="2"/>
         <circle cx="0" cy="0" r="5" fill="#FF5A5F"/>
         <!-- Label Card -->
-        <g transform="translate(-40, 24)">
-          <rect width="80" height="22" rx="6" fill="#1E293B" stroke="#334155" stroke-width="1"/>
-          <text x="40" y="15" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#E2E8F0">Coding</text>
+        <g transform="translate(-38, 22)">
+          <rect width="76" height="22" rx="6" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+          <text x="38" y="15" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#E2E8F0">Coding</text>
         </g>
       </g>
 
       <!-- Stage 2 Node: Reviewed & Merged PRs -->
-      <g transform="translate(190, 35)">
+      <g transform="translate(185, 35)">
         <circle cx="0" cy="0" r="14" fill="#1E293B" stroke="#0D9488" stroke-width="2"/>
         <circle cx="0" cy="0" r="5" fill="#0D9488"/>
         <!-- Label Card -->
@@ -225,49 +199,49 @@
       </g>
 
       <!-- Stage 3 Node: Velocity & Community -->
-      <g transform="translate(255, 145)">
+      <g transform="translate(250, 145)">
         <circle cx="0" cy="0" r="14" fill="#1E293B" stroke="#F59E0B" stroke-width="2"/>
         <circle cx="0" cy="0" r="5" fill="#F59E0B"/>
         <!-- Label Card -->
-        <g transform="translate(-40, 24)">
-          <rect width="80" height="22" rx="6" fill="#1E293B" stroke="#334155" stroke-width="1"/>
-          <text x="40" y="15" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#FBBF24">Velocity</text>
+        <g transform="translate(-38, 22)">
+          <rect width="76" height="22" rx="6" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+          <text x="38" y="15" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#FBBF24">Velocity</text>
         </g>
       </g>
 
-      <!-- Stage 4 Node: Shipped Release -->
-      <g transform="translate(360, 90)">
-        <circle cx="0" cy="0" r="16" fill="#0D9488" fill-opacity="0.2" stroke="#2DD4BF" stroke-width="2"/>
-        <circle cx="0" cy="0" r="7" fill="#2DD4BF"/>
+      <!-- Stage 4 Node: Shipped Release (Safely padded from right border) -->
+      <g transform="translate(345, 90)">
+        <circle cx="0" cy="0" r="15" fill="#0D9488" fill-opacity="0.2" stroke="#2DD4BF" stroke-width="2"/>
+        <circle cx="0" cy="0" r="6.5" fill="#2DD4BF"/>
         <!-- Star Icon on Release Node -->
         <path d="M0 -3.5 L1 -1 L3.5 -1 L1.5 0.5 L2.2 3 L0 1.5 L-2.2 3 L-1.5 0.5 L-3.5 -1 L-1 -1 Z" fill="#FFFFFF"/>
         <!-- Label Card -->
-        <g transform="translate(-44, -34)">
-          <rect width="88" height="24" rx="7" fill="#0D9488" stroke="#2DD4BF" stroke-width="1"/>
-          <text x="44" y="16" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="800" fill="#FFFFFF">Release v1.0</text>
+        <g transform="translate(-42, -32)">
+          <rect width="84" height="22" rx="7" fill="#0D9488" stroke="#2DD4BF" stroke-width="1"/>
+          <text x="42" y="15" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10.5" font-weight="800" fill="#FFFFFF">Release v1.0</text>
         </g>
       </g>
     </g>
 
-    <!-- Mini Bottom Live Metric Deck -->
-    <g transform="translate(25, 230)">
-      <rect width="390" height="50" rx="12" fill="#0F172A" stroke="#1E293B" stroke-width="1"/>
+    <!-- Mini Bottom Live Metric Deck (Centered & Generously Spaced) -->
+    <g transform="translate(20, 230)">
+      <rect width="400" height="52" rx="12" fill="#0F172A" stroke="#1E293B" stroke-width="1"/>
       <!-- Metric 1 -->
-      <g transform="translate(18, 12)">
+      <g transform="translate(16, 12)">
         <text font-family="system-ui, sans-serif" font-size="10" font-weight="600" fill="#64748B">MOMENTUM</text>
-        <text y="22" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="#FF5A5F">🚀 Building Steadily</text>
+        <text y="23" font-family="JetBrains Mono, monospace" font-size="13.5" font-weight="700" fill="#FF5A5F">🚀 Building Steadily</text>
       </g>
       <!-- Divider -->
-      <line x1="175" y1="10" x2="175" y2="40" stroke="#1E293B" stroke-width="1.5"/>
+      <line x1="178" y1="10" x2="178" y2="42" stroke="#1E293B" stroke-width="1.5"/>
       <!-- Metric 2 -->
-      <g transform="translate(195, 12)">
+      <g transform="translate(192, 12)">
         <text font-family="system-ui, sans-serif" font-size="10" font-weight="600" fill="#64748B">NEXT MILESTONE</text>
-        <text y="22" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="#2DD4BF">88% Energy</text>
+        <text y="23" font-family="JetBrains Mono, monospace" font-size="13.5" font-weight="700" fill="#2DD4BF">88% Energy</text>
       </g>
       <!-- Icon pill -->
-      <g transform="translate(325, 12)">
-        <rect width="50" height="26" rx="13" fill="#1E293B" stroke="#334155" stroke-width="1"/>
-        <text x="25" y="17" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="800" fill="#F8FAFC">AI ⚡</text>
+      <g transform="translate(330, 13)">
+        <rect width="54" height="26" rx="13" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+        <text x="27" y="17.5" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="800" fill="#F8FAFC">AI ⚡</text>
       </g>
     </g>
   </g>
