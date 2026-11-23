@@ -261,7 +261,7 @@ export default function App() {
               type: 'release',
               emoji: '🚀',
               title: `New Release ${latestTag} Shipped!`,
-              body: `${data.repo.name} just published ${latestTag}. Updating your plain-English highlights now!`,
+              body: `${data.repo.name} just published ${latestTag}. Updating your progress highlights now!`,
             });
           } else if (latestPr && prev.prNumber && latestPr !== prev.prNumber) {
             detectedNewActivity = true;
@@ -927,7 +927,7 @@ export default function App() {
                   <div className="rounded-2xl border border-teal-200/80 dark:border-teal-500/20 bg-gradient-to-r from-teal-500/10 via-teal-500/5 to-transparent p-5 sm:p-6">
                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0D9488] dark:text-[#2DD4BF]">
                       <Lightbulb className="h-4 w-4 shrink-0" />
-                      <span>The Big Idea (In Plain English)</span>
+                      <span>The Big Idea</span>
                     </div>
                     <h2 className="mt-2.5 font-display text-xl sm:text-2xl font-extrabold text-[#0F172A] dark:text-slate-100 leading-snug">
                       {readmeOverview.analogy}

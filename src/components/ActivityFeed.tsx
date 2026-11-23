@@ -235,7 +235,7 @@ export function ActivityFeed({
           </h3>
           <p className="mx-auto mt-1.5 max-w-md text-sm text-slate-600">
             Click below to synthesize {snapshot.repo.fullName}&apos;s recent activity into a friendly
-            plain-English progress report.
+            progress report.
           </p>
           <button
             type="button"
@@ -247,7 +247,7 @@ export function ActivityFeed({
           </button>
         </div>
       ) : viewMode === 'ai-story' ? (
-        /* DEFAULT MODE: AI Story Chapters + Plain-English Release Notes + Jargon Decoder */
+        /* DEFAULT MODE: AI Story Chapters + Translated Release Notes + Jargon Decoder */
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
           {/* Left / Main Column: Thematic AI Progress Chapters */}
           <div className="space-y-5 lg:col-span-7">
@@ -309,7 +309,7 @@ export function ActivityFeed({
             ))}
           </div>
 
-          {/* Right Column: Latest Release Spotlight + Plain-English Jargon Decoder */}
+          {/* Right Column: Latest Release Spotlight + Jargon Decoder */}
           <div className="space-y-6 lg:col-span-5">
             {/* Release Notes Translated */}
             <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6">

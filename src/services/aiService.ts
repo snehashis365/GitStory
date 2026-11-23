@@ -198,7 +198,7 @@ export async function fetchAvailableModelsDirect(
 }
 
 const STORY_SYSTEM_PROMPT =
-  'You are GitStory, a playful, warm community storyteller who transforms raw GitHub developer activity into clear, exciting, jargon-free progress reports for non-developers, project stakeholders, and fans. NEVER paste raw commit jargon, ticket IDs, or code syntax into headlines, chapter titles, or plain-English summaries. Always explain real-world user impact using friendly analogies, crisp everyday English, and cheerful emojis. Return ONLY a single raw valid JSON object matching the requested schema, without markdown code fences, reasoning thoughts, or conversational filler.';
+  'You are GitStory, a playful, warm community storyteller who transforms raw GitHub developer activity into clear, exciting, jargon-free progress reports for non-developers, project stakeholders, and fans. NEVER paste raw commit jargon, ticket IDs, or code syntax into headlines, chapter titles, or summaries. Always explain real-world user impact using friendly analogies, crisp everyday language, and cheerful emojis. Return ONLY a single raw valid JSON object matching the requested schema, without markdown code fences, reasoning thoughts, or conversational filler.';
 
 function extractJsonDigest(rawJson: string): Omit<AiDigest, 'generatedAt'> {
   const cleaned = rawJson.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
@@ -305,7 +305,7 @@ Respond with ONLY a valid JSON object (no markdown, no code fences, no reasoning
     {
       "emoji": "✨",
       "title": "Clear user-facing accomplishment",
-      "summary": "1-2 sentences in plain English explaining what was improved",
+      "summary": "1-2 sentences explaining clearly what was improved without jargon",
       "impactLabel": "Feature / Polish / Fix",
       "keyWins": ["Key accomplishment 1", "Key accomplishment 2"],
       "relatedCount": 3
@@ -319,17 +319,17 @@ Respond with ONLY a valid JSON object (no markdown, no code fences, no reasoning
     }
   ],
   "lifecycleStageBriefs": {
-    "commits": "Short plain-English summary of active developer work",
-    "prs": "Short plain-English summary of community reviews and merged PRs",
-    "community": "Short plain-English summary of team and contributor energy",
-    "release": "Short plain-English summary of shipped version or next rollout"
+    "commits": "Short summary of active developer work",
+    "prs": "Short summary of community reviews and merged PRs",
+    "community": "Short summary of team and contributor energy",
+    "release": "Short summary of shipped version or next rollout"
   },
   "releaseTranslation": null,
   "commitTranslations": [
     {
       "sha": "shortSha",
       "emoji": "✨",
-      "plainTitle": "Plain-English title without git jargon",
+      "plainTitle": "Clear title without git jargon",
       "whyItMatters": "Why this matters to users or project health",
       "category": "Polish"
     }
@@ -338,7 +338,7 @@ Respond with ONLY a valid JSON object (no markdown, no code fences, no reasoning
     {
       "number": 123,
       "emoji": "🎉",
-      "plainTitle": "Plain-English title of merged pull request",
+      "plainTitle": "Clear title of merged pull request",
       "whyItMatters": "Why this merged contribution matters",
       "category": "Feature"
     }
@@ -871,7 +871,7 @@ ${cleanedReadme || 'No formal README found. Analyze repository name, description
 Output ONLY a valid JSON object matching this schema:
 {
   "analogy": "A short, vivid analogy starting with 'Think of it as...' comparing this project to an everyday app, object, or service",
-  "oneLiner": "A single punchy sentence describing what this project actually does in plain English",
+  "oneLiner": "A single punchy sentence describing what this project actually does without technical jargon",
   "problemSolved": "What was difficult, frustrating, or impossible before this project existed? (2-3 sentences)",
   "howItWorks": "How this project solves that problem simply and elegantly without developer jargon (2-3 sentences)",
   "superpowers": [

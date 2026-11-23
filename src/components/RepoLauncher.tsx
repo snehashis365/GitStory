@@ -131,13 +131,13 @@ export function RepoLauncher({
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-          className="mx-auto max-w-3xl text-center"
+          className="mx-auto max-w-4xl text-center"
         >
           <p className="text-sm font-semibold text-[#0D9488]">
             Open-source progress made joyful &amp; jargon-free
           </p>
           <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-[#0F172A] sm:text-5xl md:text-[54px] leading-[1.12] sm:leading-[1.08]">
-            Turn any GitHub repo into a live plain-English story
+            Turn any GitHub repo into a live progress story
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-slate-600 sm:text-lg">
             Paste a GitHub link or <span className="font-mono text-sm text-[#0F172A]">owner/repo</span>{' '}
@@ -202,6 +202,21 @@ export function RepoLauncher({
               ))}
             </div>
           )}
+
+          {/* Animated Interactive Product Preview Banner */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.4 }}
+            className="mt-10 overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-[#0B0F19] shadow-xl shadow-slate-900/10"
+          >
+            <img
+              src="./banner.svg"
+              alt="GitStory Live Progress & Lifecycle Flow"
+              className="w-full h-auto object-cover select-none"
+              loading="eager"
+            />
+          </motion.div>
         </motion.section>
 
         {/* Curated Open-Source Starter Cards */}

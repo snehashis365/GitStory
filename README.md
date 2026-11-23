@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>Turn raw GitHub repository activity into plain-English stories, live interactive lifecycle pipelines, and community intelligence.</strong>
+  <strong>Turn raw GitHub repository activity into clear visual stories, live interactive lifecycle pipelines, and community intelligence.</strong>
 </p>
 
 <p align="center">
@@ -47,7 +47,7 @@ Open-source repositories move fast, but deciphering what actually happened in a 
 **GitStory bridges the gap between raw Git commits and human understanding.**
 
 Simply paste any public GitHub repository (e.g. `facebook/react`, `vercel/next.js`, or custom GitHub URLs) and GitStory transforms engineering velocity into:
-1. **Plain-English Story Chapters & Jargon Decoder** — Thematic summaries of features, refactors, bug fixes, and breaking changes.
+1. **Story Chapters & Jargon Decoder** — Thematic summaries of features, refactors, bug fixes, and breaking changes.
 2. **Interactive 2D Project Lifecycle Pipeline Flow** — A responsive Motion flow tracking work from *Active Coding* $\to$ *Review & PR Merges* $\to$ *Community Velocity* $\to$ *Shipped Releases*.
 3. **Project 101 README Primer** — Executive-level "Big Idea", target audience, and key capabilities breakdown with an expandable, rendered GitHub Markdown viewer.
 4. **Context-Aware AI Tour Guide** — Full streaming conversational assistant answering questions about milestones, dependencies, or releases with GitHub-Flavored Markdown formatting.

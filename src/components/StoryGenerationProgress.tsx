@@ -46,7 +46,7 @@ const STEPS: StepInfo[] = [
   {
     id: 3,
     label: 'Composing Story Chapters',
-    subtitle: 'Synthesizing plain-English impact & milestones',
+    subtitle: 'Synthesizing story impact & milestones',
     threshold: 85,
     icon: BookOpen,
   },
@@ -177,7 +177,7 @@ export function StoryGenerationProgress({
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
               Transforming latest {snapshot.commits.length} commits &amp; {snapshot.mergedPRs.length} PRs
-              {snapshot.repo.totalCommits ? ` (out of ${snapshot.repo.totalCommits.toLocaleString()} total commits)` : ''} into plain-English stories
+              {snapshot.repo.totalCommits ? ` (out of ${snapshot.repo.totalCommits.toLocaleString()} total commits)` : ''} into clear progress stories
               {provider ? ` via ${provider}${model ? ` (${model})` : ''}` : ''}
             </p>
           </div>
