@@ -1,0 +1,285 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 460" width="100%" height="100%" fill="none">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bg-grad" x1="0" y1="0" x2="1200" y2="460" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0B0F19"/>
+      <stop offset="50%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#090D16"/>
+    </linearGradient>
+
+    <!-- Mesh Glow Gradients -->
+    <radialGradient id="coral-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(980 140) rotate(90) scale(260)">
+      <stop offset="0%" stop-color="#FF5A5F" stop-opacity="0.32"/>
+      <stop offset="60%" stop-color="#FF5A5F" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#FF5A5F" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="teal-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(220 340) rotate(0) scale(320)">
+      <stop offset="0%" stop-color="#0D9488" stop-opacity="0.28"/>
+      <stop offset="60%" stop-color="#0D9488" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#0D9488" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="blue-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(720 280) rotate(45) scale(280)">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#38BDF8" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Text Gradients -->
+    <linearGradient id="title-grad" x1="0" y1="0" x2="420" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="45%" stop-color="#FFFFFF"/>
+      <stop offset="80%" stop-color="#FF5A5F"/>
+      <stop offset="100%" stop-color="#FFA8A0"/>
+    </linearGradient>
+
+    <linearGradient id="badge-grad" x1="0" y1="0" x2="200" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0D9488"/>
+      <stop offset="100%" stop-color="#2DD4BF"/>
+    </linearGradient>
+
+    <linearGradient id="wire-commits" x1="0" y1="0" x2="380" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF5A5F" stop-opacity="0.2"/>
+      <stop offset="50%" stop-color="#FF5A5F"/>
+      <stop offset="100%" stop-color="#FF5A5F" stop-opacity="0.3"/>
+    </linearGradient>
+
+    <linearGradient id="wire-prs" x1="0" y1="0" x2="380" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0D9488" stop-opacity="0.2"/>
+      <stop offset="50%" stop-color="#0D9488"/>
+      <stop offset="100%" stop-color="#2DD4BF" stop-opacity="0.3"/>
+    </linearGradient>
+
+    <!-- Grid Pattern -->
+    <pattern id="grid-dots" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="#334155" fill-opacity="0.25"/>
+    </pattern>
+
+    <!-- Animations -->
+    <style>
+      @keyframes pulse-ring {
+        0% { transform: scale(0.92); opacity: 0.8; }
+        50% { transform: scale(1.15); opacity: 0.2; }
+        100% { transform: scale(0.92); opacity: 0.8; }
+      }
+      @keyframes float-slow {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-7px); }
+      }
+      @keyframes float-reverse {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(6px); }
+      }
+      @keyframes dash-flow {
+        0% { stroke-dashoffset: 200; }
+        100% { stroke-dashoffset: 0; }
+      }
+      @keyframes glow-breathe {
+        0%, 100% { opacity: 0.25; }
+        50% { opacity: 0.55; }
+      }
+      @keyframes twinkle {
+        0%, 100% { opacity: 0.2; transform: scale(0.85); }
+        50% { opacity: 1; transform: scale(1.2); }
+      }
+      @keyframes node-pulse {
+        0%, 100% { r: 5; }
+        50% { r: 7.5; }
+      }
+      @keyframes beacon {
+        0% { r: 3; opacity: 1; }
+        100% { r: 9; opacity: 0; }
+      }
+      .anim-float { animation: float-slow 5s ease-in-out infinite; }
+      .anim-float-rev { animation: float-reverse 6s ease-in-out infinite; }
+      .anim-dash { stroke-dasharray: 8 6; animation: dash-flow 8s linear infinite; }
+      .anim-glow { animation: glow-breathe 4s ease-in-out infinite; }
+      .star-1 { animation: twinkle 3.2s ease-in-out infinite; transform-origin: 940px 80px; }
+      .star-2 { animation: twinkle 4.1s ease-in-out infinite 1.2s; transform-origin: 680px 110px; }
+      .star-3 { animation: twinkle 3.7s ease-in-out infinite 2s; transform-origin: 1100px 320px; }
+      .beacon-ring { animation: beacon 2s cubic-bezier(0, 0.2, 0.8, 1) infinite; }
+      .beacon-ring-2 { animation: beacon 2s cubic-bezier(0, 0.2, 0.8, 1) infinite 1s; }
+    </style>
+  </defs>
+
+  <!-- Card Background -->
+  <rect width="1200" height="460" rx="24" fill="url(#bg-grad)"/>
+  <rect width="1200" height="460" rx="24" fill="url(#grid-dots)"/>
+  <rect width="1198" height="458" x="1" y="1" rx="23" stroke="#334155" stroke-opacity="0.45" stroke-width="1"/>
+
+  <!-- Breathing Ambient Orbs -->
+  <circle cx="980" cy="140" r="260" fill="url(#coral-glow)" class="anim-glow"/>
+  <circle cx="220" cy="340" r="320" fill="url(#teal-glow)" class="anim-glow"/>
+  <circle cx="720" cy="280" r="280" fill="url(#blue-glow)"/>
+
+  <!-- Background Decorative Code/Commit Matrix (Subtle) -->
+  <g opacity="0.12" font-family="JetBrains Mono, SFMono-Regular, monospace" font-size="11" fill="#94A3B8">
+    <text x="80" y="60">git checkout -b community-story</text>
+    <text x="80" y="80">✓ Synthesizing 28 commits &amp; 9 merged PRs...</text>
+    <text x="80" y="100">→ Momentum: Building Steadily 🚀 (84% to Next Release)</text>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- LEFT COLUMN: Brand Identity & Value Statement                              -->
+  <!-- ========================================================================= -->
+  <g transform="translate(80, 130)">
+    <!-- Top Pill: Live Intelligence -->
+    <g transform="translate(0, 0)">
+      <rect width="210" height="30" rx="15" fill="#1E293B" fill-opacity="0.9" stroke="#334155" stroke-width="1"/>
+      <!-- Animated Status Beacon -->
+      <circle cx="16" cy="15" r="4" fill="#10B981"/>
+      <circle cx="16" cy="15" r="4" stroke="#10B981" stroke-width="1.5" fill="none" class="beacon-ring"/>
+      <circle cx="16" cy="15" r="4" stroke="#10B981" stroke-width="1.5" fill="none" class="beacon-ring-2"/>
+      <text x="28" y="19" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#94A3B8" letter-spacing="0.5">OPEN-SOURCE INTELLIGENCE</text>
+    </g>
+
+    <!-- Main Title with Gradient -->
+    <g transform="translate(0, 68)">
+      <text font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="900" fill="url(#title-grad)" letter-spacing="-1.5">
+        GitStory
+      </text>
+      <!-- Sub-tagline -->
+      <text y="38" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="600" fill="#E2E8F0" letter-spacing="-0.3">
+        Turn raw GitHub repos into plain-English stories
+      </text>
+      <!-- Paragraph -->
+      <text y="70" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="400" fill="#94A3B8">
+        AI progress chapters, 4-stage lifecycle flow, and non-technical
+      </text>
+      <text y="92" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="400" fill="#94A3B8">
+        project intelligence for fans, founders, stakeholders, and builders.
+      </text>
+    </g>
+
+    <!-- Interactive Capability Pills -->
+    <g transform="translate(0, 202)">
+      <!-- Pill 1: AI Stories -->
+      <g>
+        <rect width="144" height="32" rx="16" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+        <text x="14" y="20" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#F8FAFC">✨ AI Story Chapters</text>
+      </g>
+      <!-- Pill 2: 4-Stage Lifecycle Flow -->
+      <g transform="translate(152, 0)">
+        <rect width="168" height="32" rx="16" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+        <text x="14" y="20" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#F8FAFC">⚡ 2D Lifecycle Flow</text>
+      </g>
+      <!-- Pill 3: Project 101 README -->
+      <g transform="translate(328, 0)">
+        <rect width="170" height="32" rx="16" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+        <text x="14" y="20" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#2DD4BF">📖 Project 101 Primer</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- RIGHT COLUMN: Animated 2D Git Lifecycle Pipeline Graphic                   -->
+  <!-- ========================================================================= -->
+  <g transform="translate(680, 80)">
+    <!-- Frame Box for Visual -->
+    <rect width="440" height="300" rx="20" fill="#111827" fill-opacity="0.85" stroke="#334155" stroke-opacity="0.6" stroke-width="1.5" class="anim-float"/>
+
+    <!-- Inner Header Bar -->
+    <g transform="translate(20, 20)">
+      <circle cx="6" cy="6" r="4.5" fill="#EF4444" fill-opacity="0.8"/>
+      <circle cx="22" cy="6" r="4.5" fill="#F59E0B" fill-opacity="0.8"/>
+      <circle cx="38" cy="6" r="4.5" fill="#10B981" fill-opacity="0.8"/>
+      <text x="60" y="10" font-family="JetBrains Mono, monospace" font-size="11" font-weight="600" fill="#64748B">pipeline.lifecycle.flow</text>
+
+      <rect x="290" y="-3" width="110" height="20" rx="10" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+      <text x="302" y="11" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#0D9488">● AUTO-SYNC 60s</text>
+    </g>
+
+    <!-- Main Git Branching Tracks -->
+    <g transform="translate(30, 75)">
+      <!-- Master Branch Trunk -->
+      <line x1="20" y1="90" x2="360" y2="90" stroke="#334155" stroke-width="3" stroke-linecap="round"/>
+
+      <!-- Feature Branch Curving Out & Back In -->
+      <path d="M 50 90 C 80 90, 95 35, 140 35 L 240 35 C 280 35, 295 90, 325 90" 
+            stroke="#FF5A5F" stroke-width="2.5" fill="none" stroke-linecap="round" class="anim-dash"/>
+
+      <!-- Release Branch Curving Out Downward -->
+      <path d="M 120 90 C 150 90, 165 145, 210 145 L 300 145 C 330 145, 345 90, 360 90" 
+            stroke="#0D9488" stroke-width="2.5" fill="none" stroke-linecap="round" class="anim-dash"/>
+
+      <!-- Stage 1 Node: Active Coding -->
+      <g transform="translate(50, 90)">
+        <circle cx="0" cy="0" r="14" fill="#1E293B" stroke="#FF5A5F" stroke-width="2"/>
+        <circle cx="0" cy="0" r="5" fill="#FF5A5F"/>
+        <!-- Label Card -->
+        <g transform="translate(-40, 24)">
+          <rect width="80" height="22" rx="6" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+          <text x="40" y="15" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#E2E8F0">Coding</text>
+        </g>
+      </g>
+
+      <!-- Stage 2 Node: Reviewed & Merged PRs -->
+      <g transform="translate(190, 35)">
+        <circle cx="0" cy="0" r="14" fill="#1E293B" stroke="#0D9488" stroke-width="2"/>
+        <circle cx="0" cy="0" r="5" fill="#0D9488"/>
+        <!-- Label Card -->
+        <g transform="translate(-40, -32)">
+          <rect width="80" height="22" rx="6" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+          <text x="40" y="15" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#2DD4BF">Merged PR</text>
+        </g>
+      </g>
+
+      <!-- Stage 3 Node: Velocity & Community -->
+      <g transform="translate(255, 145)">
+        <circle cx="0" cy="0" r="14" fill="#1E293B" stroke="#F59E0B" stroke-width="2"/>
+        <circle cx="0" cy="0" r="5" fill="#F59E0B"/>
+        <!-- Label Card -->
+        <g transform="translate(-40, 24)">
+          <rect width="80" height="22" rx="6" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+          <text x="40" y="15" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#FBBF24">Velocity</text>
+        </g>
+      </g>
+
+      <!-- Stage 4 Node: Shipped Release -->
+      <g transform="translate(360, 90)">
+        <circle cx="0" cy="0" r="16" fill="#0D9488" fill-opacity="0.2" stroke="#2DD4BF" stroke-width="2"/>
+        <circle cx="0" cy="0" r="7" fill="#2DD4BF"/>
+        <!-- Star Icon on Release Node -->
+        <path d="M0 -3.5 L1 -1 L3.5 -1 L1.5 0.5 L2.2 3 L0 1.5 L-2.2 3 L-1.5 0.5 L-3.5 -1 L-1 -1 Z" fill="#FFFFFF"/>
+        <!-- Label Card -->
+        <g transform="translate(-44, -34)">
+          <rect width="88" height="24" rx="7" fill="#0D9488" stroke="#2DD4BF" stroke-width="1"/>
+          <text x="44" y="16" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="800" fill="#FFFFFF">Release v1.0</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- Mini Bottom Live Metric Deck -->
+    <g transform="translate(25, 230)">
+      <rect width="390" height="50" rx="12" fill="#0F172A" stroke="#1E293B" stroke-width="1"/>
+      <!-- Metric 1 -->
+      <g transform="translate(18, 12)">
+        <text font-family="system-ui, sans-serif" font-size="10" font-weight="600" fill="#64748B">MOMENTUM</text>
+        <text y="22" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="#FF5A5F">🚀 Building Steadily</text>
+      </g>
+      <!-- Divider -->
+      <line x1="175" y1="10" x2="175" y2="40" stroke="#1E293B" stroke-width="1.5"/>
+      <!-- Metric 2 -->
+      <g transform="translate(195, 12)">
+        <text font-family="system-ui, sans-serif" font-size="10" font-weight="600" fill="#64748B">NEXT MILESTONE</text>
+        <text y="22" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="#2DD4BF">88% Energy</text>
+      </g>
+      <!-- Icon pill -->
+      <g transform="translate(325, 12)">
+        <rect width="50" height="26" rx="13" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+        <text x="25" y="17" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="800" fill="#F8FAFC">AI ⚡</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Twinkling Constellation Stars -->
+  <g fill="#FF5A5F" class="star-1">
+    <path d="M940 76l1.2 2.8 2.8 1.2-2.8 1.2-1.2 2.8-1.2-2.8-2.8-1.2 2.8-1.2z"/>
+  </g>
+  <g fill="#0D9488" class="star-2">
+    <path d="M680 106l1.2 2.8 2.8 1.2-2.8 1.2-1.2 2.8-1.2-2.8-2.8-1.2 2.8-1.2z"/>
+  </g>
+  <g fill="#38BDF8" class="star-3">
+    <path d="M1100 316l1.2 2.8 2.8 1.2-2.8 1.2-1.2 2.8-1.2-2.8-2.8-1.2 2.8-1.2z"/>
+  </g>
+</svg>
