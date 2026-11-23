@@ -49,7 +49,11 @@
   }
 }
 
-/* Comprehensive Dark Mode Theme Layer */
+/* ==========================================================================
+   Comprehensive Dark Mode High-Contrast Theme System
+   ========================================================================== */
+
+/* 1. Surfaces & Canvases */
 html.dark .bg-white {
   background-color: #111827;
 }
@@ -63,20 +67,8 @@ html.dark .bg-\[\#F8FAFC\] {
   background-color: #0B0F19;
 }
 
-html.dark .text-\[\#0F172A\] {
-  color: #F8FAFC;
-}
-
-html.dark .border-slate-200,
-html.dark .border-slate-200\/85,
-html.dark .border-slate-200\/80,
-html.dark .border-slate-200\/70,
-html.dark .border-slate-200\/90,
-html.dark .border-slate-100 {
-  border-color: #1F293D;
-}
-
 html.dark .bg-slate-50,
+html.dark .bg-slate-50\/60,
 html.dark .bg-slate-50\/70,
 html.dark .bg-slate-50\/90 {
   background-color: #162032;
@@ -86,13 +78,71 @@ html.dark .bg-slate-100 {
   background-color: #1E293B;
 }
 
-html.dark .text-slate-600,
-html.dark .text-slate-700 {
-  color: #94A3B8;
+html.dark .bg-slate-200,
+html.dark .bg-slate-200\/70,
+html.dark .bg-slate-200\/80 {
+  background-color: #27354E;
+}
+
+/* 2. Elevated Dark Action Buttons (fixing zero-contrast #0F172A buttons in dark mode) */
+html.dark .bg-\[\#0F172A\] {
+  background-color: #243048;
+  border-color: #384A6A;
+}
+
+html.dark button.bg-\[\#0F172A\]:hover,
+html.dark .hover\:bg-slate-800:hover {
+  background-color: #2F3E5C;
+}
+
+/* 3. Text & Typography Contrast */
+html.dark .text-\[\#0F172A\] {
+  color: #F8FAFC;
+}
+
+html.dark .text-\[\#0D9488\] {
+  color: #2DD4BF;
+}
+
+html.dark .text-\[\#8B5CF6\] {
+  color: #A78BFA;
+}
+
+html.dark .text-\[\#D97706\] {
+  color: #FBBF24;
+}
+
+html.dark .text-\[\#DC2626\] {
+  color: #F87171;
+}
+
+html.dark .text-slate-700,
+html.dark .text-slate-600 {
+  color: #CBD5E1;
 }
 
 html.dark .text-slate-500 {
+  color: #94A3B8;
+}
+
+html.dark .text-slate-400 {
+  color: #94A3B8;
+}
+
+html.dark .text-slate-300 {
   color: #64748B;
+}
+
+html.dark .hover\:text-\[\#0F172A\]:hover {
+  color: #FFFFFF;
+}
+
+html.dark .hover\:text-slate-700:hover {
+  color: #FFFFFF;
+}
+
+html.dark .hover\:text-slate-600:hover {
+  color: #E2E8F0;
 }
 
 html.dark .hover\:bg-slate-50:hover {
@@ -103,10 +153,36 @@ html.dark .hover\:bg-slate-100:hover {
   background-color: #243048;
 }
 
-html.dark .hover\:text-\[\#0F172A\]:hover {
+html.dark .hover\:bg-white:hover {
+  background-color: #1A2438;
+}
+
+html.dark .bg-slate-300 {
+  background-color: #334155;
+}
+
+html.dark code {
+  background-color: rgba(255, 255, 255, 0.08);
   color: #F8FAFC;
 }
 
+/* 4. Borders */
+html.dark .border-slate-200,
+html.dark .border-slate-200\/60,
+html.dark .border-slate-200\/70,
+html.dark .border-slate-200\/80,
+html.dark .border-slate-200\/85,
+html.dark .border-slate-200\/90,
+html.dark .border-slate-100 {
+  border-color: #1F293D;
+}
+
+html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1F293D;
+}
+
+/* 5. Inputs, Selects, and Focus States (prevent blinding white flashes on focus) */
 html.dark input,
 html.dark select,
 html.dark textarea {
@@ -118,6 +194,155 @@ html.dark textarea::placeholder {
   color: #64748B;
 }
 
+html.dark .focus\:bg-white:focus,
+html.dark .focus-within\:bg-white:focus-within {
+  background-color: #141C2E !important;
+}
+
+html.dark select option {
+  background-color: #111827;
+  color: #F8FAFC;
+}
+
+/* 6. Accent Badges & Category Blocks (Replacing unreadable pastel backgrounds & dark text) */
+/* Emerald / Success / Feature / Polish */
+html.dark .bg-emerald-50,
+html.dark .bg-emerald-50\/40 {
+  background-color: rgba(16, 185, 129, 0.16);
+}
+html.dark .text-emerald-600,
+html.dark .text-emerald-700,
+html.dark .text-emerald-800,
+html.dark .text-emerald-900,
+html.dark .text-emerald-950 {
+  color: #34D399;
+}
+html.dark .border-emerald-200,
+html.dark .border-emerald-200\/60 {
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+/* Teal / Pull Requests / AI Active */
+html.dark .bg-teal-50,
+html.dark .bg-teal-50\/40,
+html.dark .bg-teal-50\/60 {
+  background-color: rgba(20, 184, 166, 0.16);
+}
+html.dark .text-teal-600,
+html.dark .text-teal-700 {
+  color: #2DD4BF;
+}
+html.dark .border-teal-200,
+html.dark .border-teal-200\/60 {
+  border-color: rgba(45, 212, 191, 0.3);
+}
+
+/* Rose & Coral / Commits */
+html.dark .bg-rose-50,
+html.dark .bg-rose-50\/40 {
+  background-color: rgba(244, 63, 94, 0.16);
+}
+html.dark .text-rose-600,
+html.dark .text-rose-700 {
+  color: #FB7185;
+}
+html.dark .border-rose-200,
+html.dark .border-rose-200\/60 {
+  border-color: rgba(251, 113, 133, 0.3);
+}
+
+/* Amber / Speed / Alerts / Warning */
+html.dark .bg-amber-50,
+html.dark .bg-amber-50\/40,
+html.dark .bg-amber-50\/90 {
+  background-color: rgba(245, 158, 11, 0.16);
+}
+html.dark .hover\:bg-amber-100:hover {
+  background-color: rgba(245, 158, 11, 0.28);
+}
+html.dark .text-amber-600,
+html.dark .text-amber-700,
+html.dark .text-amber-800,
+html.dark .text-amber-900 {
+  color: #FBBF24;
+}
+html.dark .border-amber-200,
+html.dark .border-amber-300,
+html.dark .border-amber-200\/60 {
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+/* Indigo / Community */
+html.dark .bg-indigo-50,
+html.dark .bg-indigo-50\/40 {
+  background-color: rgba(99, 102, 241, 0.16);
+}
+html.dark .text-indigo-600,
+html.dark .text-indigo-700 {
+  color: #818CF8;
+}
+html.dark .border-indigo-200,
+html.dark .border-indigo-200\/60 {
+  border-color: rgba(129, 140, 248, 0.3);
+}
+
+/* Violet / Polish */
+html.dark .bg-violet-50,
+html.dark .bg-violet-50\/40 {
+  background-color: rgba(139, 92, 246, 0.16);
+}
+html.dark .text-violet-600,
+html.dark .text-violet-700 {
+  color: #A78BFA;
+}
+html.dark .border-violet-200,
+html.dark .border-violet-200\/60 {
+  border-color: rgba(167, 139, 250, 0.3);
+}
+
+/* Sky / Docs */
+html.dark .bg-sky-50,
+html.dark .bg-sky-50\/40 {
+  background-color: rgba(14, 165, 233, 0.16);
+}
+html.dark .text-sky-600,
+html.dark .text-sky-700 {
+  color: #38BDF8;
+}
+html.dark .border-sky-200,
+html.dark .border-sky-200\/60 {
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+/* Red / Bug / Fix / Error */
+html.dark .bg-red-50,
+html.dark .bg-red-50\/40 {
+  background-color: rgba(239, 68, 68, 0.16);
+}
+html.dark .text-red-600,
+html.dark .text-red-700 {
+  color: #F87171;
+}
+html.dark .border-red-200,
+html.dark .border-red-200\/60 {
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+/* Fuchsia / Celebration */
+html.dark .bg-fuchsia-50,
+html.dark .bg-fuchsia-50\/40 {
+  background-color: rgba(217, 70, 239, 0.16);
+}
+html.dark .text-fuchsia-600,
+html.dark .text-fuchsia-700 {
+  color: #E879F9;
+}
+html.dark .border-fuchsia-200,
+html.dark .border-fuchsia-200\/60 {
+  border-color: rgba(232, 121, 249, 0.3);
+}
+
+/* 7. Recharts Components */
 html.dark .recharts-cartesian-grid line {
   stroke: #1F293D;
 }
@@ -134,6 +359,14 @@ html.dark .recharts-default-tooltip {
 
 html.dark .recharts-tooltip-item {
   color: #F8FAFC !important;
+}
+
+html.dark .recharts-tooltip-label {
+  color: #F8FAFC !important;
+}
+
+html.dark .recharts-tooltip-cursor {
+  fill: rgba(255, 255, 255, 0.05) !important;
 }
 
 @keyframes floatSlow {

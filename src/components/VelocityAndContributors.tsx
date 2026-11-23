@@ -128,7 +128,7 @@ export function VelocityAndContributors({ snapshot, digest }: VelocityAndContrib
             </span>
             <span className="font-mono tabular-nums text-[#FF5A5F]">{releaseProgress}%</span>
           </div>
-          <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100">
+          <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${releaseProgress}%` }}
@@ -147,7 +147,7 @@ export function VelocityAndContributors({ snapshot, digest }: VelocityAndContrib
                 <span>🎯 PR Merge Energy</span>
                 <span className="font-mono tabular-nums text-[#0D9488]">{prMomentumPct}%</span>
               </div>
-              <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+              <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${prMomentumPct}%` }}
@@ -162,7 +162,7 @@ export function VelocityAndContributors({ snapshot, digest }: VelocityAndContrib
                 <span>⚡ Commit Sprint Pace</span>
                 <span className="font-mono tabular-nums text-[#FF5A5F]">{commitBurstPct}%</span>
               </div>
-              <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+              <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${commitBurstPct}%` }}
@@ -204,7 +204,7 @@ export function VelocityAndContributors({ snapshot, digest }: VelocityAndContrib
                     href={person.htmlUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="group block rounded-xl p-2 -mx-2 transition-colors hover:bg-slate-50"
+                    className="group block rounded-xl p-2 -mx-2 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
@@ -234,7 +234,7 @@ export function VelocityAndContributors({ snapshot, digest }: VelocityAndContrib
                         <ExternalLink className="h-3 w-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </div>
-                    <div className="mt-2 ml-8 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                    <div className="mt-2 ml-8 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${widthPct}%` }}

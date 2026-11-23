@@ -221,10 +221,10 @@ export function StoryGenerationProgress({
               key={step.id}
               className={`relative rounded-2xl border p-4 transition-all ${
                 isDone
-                  ? 'border-emerald-200 bg-emerald-50/40 text-emerald-950'
+                  ? 'border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/40 dark:bg-emerald-500/15 text-emerald-950 dark:text-emerald-300'
                   : isCurrent
-                    ? 'border-[#FF5A5F]/40 bg-[#FF5A5F]/5 text-[#0F172A] ring-2 ring-[#FF5A5F]/20'
-                    : 'border-slate-100 bg-slate-50/60 text-slate-400 opacity-60'
+                    ? 'border-[#FF5A5F]/40 bg-[#FF5A5F]/5 dark:bg-[#FF5A5F]/15 text-[#0F172A] dark:text-slate-100 ring-2 ring-[#FF5A5F]/20'
+                    : 'border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 text-slate-400 dark:text-slate-500 opacity-60'
               }`}
             >
               <div className="flex items-center justify-between mb-2">
@@ -236,7 +236,7 @@ export function StoryGenerationProgress({
                 ) : isCurrent ? (
                   <Loader2 className="h-4 w-4 animate-spin text-[#FF5A5F]" />
                 ) : (
-                  <span className="h-2 w-2 rounded-full bg-slate-300" />
+                  <span className="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-700" />
                 )}
               </div>
 

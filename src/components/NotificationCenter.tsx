@@ -60,7 +60,7 @@ export function NotificationToastStack({ alerts, onDismiss }: NotificationToastS
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.96 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="pointer-events-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-900/8"
+            className="pointer-events-auto rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 shadow-lg shadow-slate-900/8 dark:shadow-slate-950/40"
           >
             <div className="flex items-start gap-3">
               <CategoryBadge category={alert.type} kind={alert.type === 'celebration' ? 'alert' : alert.type} size="md" />
@@ -73,7 +73,7 @@ export function NotificationToastStack({ alerts, onDismiss }: NotificationToastS
                     type="button"
                     onClick={() => onDismiss(alert.id)}
                     aria-label="Dismiss milestone notification"
-                    className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                    className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
                   >
                     <X className="h-4 w-4" />
                   </button>

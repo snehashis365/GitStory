@@ -467,7 +467,7 @@ export default function App() {
                 type="button"
                 onClick={() => setShowProviderModal(true)}
                 title={`AI: ${aiConfig.provider} · ${aiConfig.model || 'default model'}`}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-[#F8FAFC] px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-semibold text-slate-600 hover:border-[#FF5A5F]/40 hover:text-[#FF5A5F] transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:border-[#FF5A5F]/40 hover:text-[#FF5A5F] transition-colors cursor-pointer"
               >
                 <Sparkles className="h-3.5 w-3.5 text-[#FF5A5F]" />
                 <span className="capitalize">{aiConfig.provider}</span>
@@ -477,7 +477,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setShowProviderModal(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/15 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-500/25 transition-colors cursor-pointer"
               >
                 <Sparkles className="h-3.5 w-3.5 text-amber-600" />
                 <span>Set AI Key</span>
@@ -651,12 +651,12 @@ export default function App() {
                   if (switcherError) setSwitcherError(null);
                 }}
                 placeholder="Paste any GitHub URL or owner/repo (e.g. tailwindlabs/tailwindcss)"
-                className="flex-1 rounded-xl border border-slate-200 bg-[#F8FAFC] px-4 py-2.5 text-sm text-[#0F172A] focus:border-[#FF5A5F] focus:bg-white focus:outline-none"
+                className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-4 py-2.5 text-sm text-[#0F172A] dark:text-slate-100 focus:border-[#FF5A5F] focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
               />
               <button
                 type="submit"
                 disabled={isLoadingRepo}
-                className="rounded-xl bg-[#0F172A] px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60 whitespace-nowrap cursor-pointer"
+                className="rounded-xl bg-[#0F172A] dark:bg-slate-800 dark:hover:bg-slate-700 dark:border dark:border-slate-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60 whitespace-nowrap cursor-pointer"
               >
                 {isLoadingRepo ? 'Loading...' : 'Load Repo'}
               </button>
@@ -732,7 +732,7 @@ export default function App() {
                 onClick={() => void fetchAiSummary(snapshot, { forceRefresh: true })}
                 disabled={isLoadingAi}
                 title="Force-regenerate the AI briefing and story chapters from recent git activity"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-[#F8FAFC] px-3.5 py-2.5 text-xs font-semibold text-slate-700 hover:border-[#FF5A5F]/40 hover:text-[#FF5A5F] hover:bg-white disabled:opacity-50 transition-all whitespace-nowrap cursor-pointer shadow-xs"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-3.5 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-[#FF5A5F]/40 hover:text-[#FF5A5F] hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 transition-all whitespace-nowrap cursor-pointer shadow-xs"
               >
                 <RefreshCw
                   className={`h-3.5 w-3.5 text-[#FF5A5F] ${isLoadingAi ? 'animate-spin' : ''}`}
@@ -743,7 +743,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setChatOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#0F172A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition-colors whitespace-nowrap cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#0F172A] dark:bg-slate-800 dark:hover:bg-slate-700 dark:border dark:border-slate-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition-colors whitespace-nowrap cursor-pointer shadow-xs"
               >
                 <MessageCircle className="h-4 w-4 text-[#FF5A5F]" />
                 <span>Chat About Progress</span>
@@ -842,7 +842,7 @@ export default function App() {
         <VelocityAndContributors snapshot={snapshot} digest={digest} />
       </main>
 
-      <footer className="border-t border-slate-200 bg-white">
+      <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-5 text-xs text-slate-500 sm:px-6">
           <span>
             GitStory · Tracking <strong className="text-[#0F172A]">{snapshot.repo.fullName}</strong>
@@ -856,7 +856,7 @@ export default function App() {
           type="button"
           onClick={() => setChatOpen(true)}
           aria-label="Open Community AI Chat"
-          className="fixed bottom-5 right-5 z-30 inline-flex h-13 items-center gap-2 rounded-full bg-[#0F172A] px-5 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-transform hover:-translate-y-0.5 md:hidden cursor-pointer"
+          className="fixed bottom-5 right-5 z-30 inline-flex h-13 items-center gap-2 rounded-full bg-[#0F172A] dark:bg-slate-800 dark:hover:bg-slate-700 dark:border dark:border-slate-700 px-5 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-transform hover:-translate-y-0.5 md:hidden cursor-pointer"
         >
           <MessageCircle className="h-4 w-4 text-[#FF5A5F]" />
           <span>Ask AI</span>

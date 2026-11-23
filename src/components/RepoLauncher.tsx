@@ -64,7 +64,7 @@ export function RepoLauncher({
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] flex flex-col">
       {/* Clean 3-zone Top Bar Contract */}
-      <header className="w-full border-b border-slate-200/80 bg-white/90">
+      <header className="w-full border-b border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-8 px-6 py-4">
           <a
             href="#top"
@@ -103,8 +103,8 @@ export function RepoLauncher({
                 onClick={onChangeAI}
                 className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-semibold transition-colors cursor-pointer ${
                   aiConfig
-                    ? 'border-slate-200 bg-[#F8FAFC] text-slate-600 hover:border-[#FF5A5F]/40 hover:text-[#FF5A5F]'
-                    : 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                    ? 'border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-[#FF5A5F]/40 hover:text-[#FF5A5F]'
+                    : 'border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-500/25'
                 }`}
               >
                 <Settings className="h-3.5 w-3.5" />
@@ -145,7 +145,7 @@ export function RepoLauncher({
 
           {/* Primary Search Input */}
           <form onSubmit={handleSubmit} className="mt-9">
-            <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm sm:flex-row sm:items-center focus-within:border-[#FF5A5F] focus-within:ring-4 focus-within:ring-[#FF5A5F]/12 transition-all">
+            <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 shadow-sm sm:flex-row sm:items-center focus-within:border-[#FF5A5F] focus-within:ring-4 focus-within:ring-[#FF5A5F]/12 transition-all">
               <div className="flex flex-1 items-center gap-3 px-3">
                 <Search className="h-5 w-5 shrink-0 text-slate-400" />
                 <input
@@ -157,7 +157,7 @@ export function RepoLauncher({
                   }}
                   placeholder="Paste github.com/owner/repo or type facebook/react"
                   aria-label="GitHub repository URL or owner/repo"
-                  className="w-full bg-transparent py-2.5 text-base text-[#0F172A] placeholder:text-slate-400 focus:outline-none"
+                  className="w-full bg-transparent py-2.5 text-base text-[#0F172A] dark:text-slate-100 placeholder:text-slate-400 focus:outline-none"
                   disabled={isLoading}
                 />
               </div>
@@ -229,11 +229,11 @@ export function RepoLauncher({
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05, duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-                className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#0D9488]/50 hover:shadow-md hover:shadow-slate-900/5 disabled:opacity-60 cursor-pointer"
+                className="group flex flex-col justify-between rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#0D9488]/50 hover:shadow-md hover:shadow-slate-900/5 disabled:opacity-60 cursor-pointer"
               >
                 <div>
                   <div className="flex items-center justify-between">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-[#F8FAFC] text-[#0F172A] p-2 shadow-xs group-hover:border-[#0D9488]/40 transition-colors">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-[#F8FAFC] dark:bg-slate-800 text-[#0F172A] dark:text-white p-2 shadow-xs group-hover:border-[#0D9488]/40 transition-colors">
                       {(() => {
                         const IconComponent = TECH_ICONS[item.techIcon];
                         return <IconComponent className="h-full w-full" />;
@@ -302,7 +302,7 @@ export function RepoLauncher({
         </section>
       </main>
 
-      <footer className="border-t border-slate-200/70 bg-white">
+      <footer className="border-t border-slate-200/70 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-5 text-xs text-slate-500">
           <div className="flex items-center gap-2">
             <Compass className="h-4 w-4 text-[#0D9488]" />

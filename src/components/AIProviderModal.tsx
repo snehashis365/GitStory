@@ -314,7 +314,7 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
           <select
             value={model || models[0]}
             onChange={(e) => setModel(e.target.value)}
-            className="w-full appearance-none rounded-xl border border-slate-200 bg-[#F8FAFC] px-4 py-3 pr-10 text-sm font-mono text-[#0F172A] focus:border-[#FF5A5F] focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20 cursor-pointer"
+            className="w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-4 py-3 pr-10 text-sm font-mono text-[#0F172A] dark:text-slate-100 focus:border-[#FF5A5F] focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20 cursor-pointer"
           >
             {models.map((m) => (
               <option key={m} value={m}>
@@ -332,7 +332,7 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
             value={model}
             onChange={(e) => setModel(e.target.value)}
             placeholder={meta.defaultModel}
-            className="w-full rounded-xl border border-slate-200 bg-[#F8FAFC] px-4 py-3 text-sm font-mono text-[#0F172A] placeholder:text-slate-400 focus:border-[#FF5A5F] focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20"
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-4 py-3 text-sm font-mono text-[#0F172A] dark:text-slate-100 placeholder:text-slate-400 focus:border-[#FF5A5F] focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20"
           />
         </div>
       )}
@@ -357,7 +357,7 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
             value={localEndpoint}
             onChange={(e) => { setLocalEndpoint(e.target.value); setSubmitError(null); }}
             placeholder="http://localhost:11434/v1"
-            className="w-full rounded-xl border border-slate-200 bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] focus:border-[#FF5A5F] focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20"
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-4 py-3 text-sm text-[#0F172A] dark:text-slate-100 focus:border-[#FF5A5F] focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20"
           />
         </div>
       )}
@@ -384,12 +384,12 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
             onChange={(e) => { setApiKey(e.target.value); setSubmitError(null); }}
             placeholder={meta.placeholder}
             autoComplete="off"
-            className="w-full rounded-xl border border-slate-200 bg-[#F8FAFC] px-4 py-3 pr-11 text-sm font-mono text-[#0F172A] focus:border-[#FF5A5F] focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20"
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-4 py-3 pr-11 text-sm font-mono text-[#0F172A] dark:text-slate-100 focus:border-[#FF5A5F] focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20"
           />
           <button
             type="button"
             onClick={() => setShowKey((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
             aria-label={showKey ? 'Hide key' : 'Show key'}
           >
             {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -404,11 +404,11 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
       {modelField}
 
       {/* Optional GitHub Token */}
-      <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-1.5">
-        <label className="block text-xs font-bold text-slate-700">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/70 p-3.5 space-y-1.5">
+        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
           GitHub Personal Access Token (Optional)
         </label>
-        <p className="text-[11px] text-slate-500">
+        <p className="text-[11px] text-slate-500 dark:text-slate-400">
           Unauthenticated calls are limited to 60 req/hr. Paste a fine-grained token to boost to 5,000 req/hr.
         </p>
         <input
@@ -417,7 +417,7 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
           onChange={(e) => setGhToken(e.target.value)}
           placeholder="ghp_... (stored locally in browser)"
           autoComplete="off"
-          className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-mono text-[#0F172A] focus:border-[#FF5A5F] focus:outline-none"
+          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2 text-xs font-mono text-[#0F172A] dark:text-slate-100 focus:border-[#FF5A5F] focus:outline-none"
         />
       </div>
 
@@ -432,7 +432,7 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
           <button
             type="button"
             onClick={onClose}
-            className="w-1/3 rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#0F172A] transition-colors cursor-pointer"
+            className="w-1/3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-[#0F172A] dark:hover:text-white transition-colors cursor-pointer"
           >
             Cancel
           </button>
@@ -512,7 +512,7 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
                     className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-all cursor-pointer border ${
                       isSelected
                         ? 'border-[#FF5A5F] bg-[#FF5A5F]/10 text-[#FF5A5F] shadow-xs'
-                        : 'border-slate-200 bg-[#F8FAFC] text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                        : 'border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800'
                     }`}
                   >
                     <Icon className="h-4 w-4 shrink-0" />
@@ -524,7 +524,7 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
 
             {/* Provider note */}
             {meta.note && (
-              <p className="mb-4 rounded-xl border border-slate-100 bg-[#F8FAFC] px-3 py-2 text-xs text-slate-500">
+              <p className="mb-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-[#F8FAFC] dark:bg-slate-900 px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
                 {meta.note}
               </p>
             )}

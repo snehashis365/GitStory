@@ -307,8 +307,8 @@ export function CommunityChatDrawer({
                     <div
                       className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm ${
                         isUser
-                          ? 'bg-[#0F172A] text-white'
-                          : 'border border-slate-200 bg-white text-slate-700'
+                          ? 'bg-[#0F172A] dark:bg-slate-800 text-white dark:border dark:border-slate-700 shadow-xs'
+                          : 'border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 shadow-xs'
                       }`}
                     >
                       {msg.content ? (
@@ -353,7 +353,7 @@ export function CommunityChatDrawer({
                         key={q}
                         type="button"
                         onClick={() => void sendMessage(q)}
-                        className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left text-xs font-medium text-slate-700 hover:border-[#0D9488] hover:text-[#0F172A] transition-colors cursor-pointer"
+                        className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 py-2.5 text-left text-xs font-medium text-slate-700 dark:text-slate-300 hover:border-[#0D9488] hover:text-[#0F172A] dark:hover:text-white transition-colors cursor-pointer"
                       >
                         {q}
                       </button>
@@ -370,7 +370,7 @@ export function CommunityChatDrawer({
               onSubmit={handleSubmit}
               className="border-t border-slate-200 bg-white p-4"
             >
-              <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-[#F8FAFC] p-1.5 focus-within:border-[#FF5A5F] focus-within:bg-white transition-colors">
+              <div className="flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-[#F8FAFC] dark:bg-slate-900/90 p-1.5 focus-within:border-[#FF5A5F] focus-within:bg-white dark:focus-within:bg-slate-900 transition-colors">
                 <input
                   type="text"
                   value={input}
@@ -378,7 +378,7 @@ export function CommunityChatDrawer({
                   placeholder="Ask about commits, releases, or dev terms..."
                   aria-label="Ask GitStory AI a question"
                   disabled={isStreaming}
-                  className="flex-1 bg-transparent px-3 py-2 text-sm text-[#0F172A] placeholder:text-slate-400 focus:outline-none"
+                  className="flex-1 bg-transparent px-3 py-2 text-sm text-[#0F172A] dark:text-slate-100 placeholder:text-slate-400 focus:outline-none"
                 />
                 <button
                   type="submit"
