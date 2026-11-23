@@ -34,6 +34,8 @@ jobs:
         run: npm ci
 
       - name: Build GitStory Static Bundle
+        env:
+          VITE_DEMO_AI_PROXY_URL: ${{ vars.VITE_DEMO_AI_PROXY_URL || secrets.VITE_DEMO_AI_PROXY_URL }}
         run: npm run build
 
       - name: Setup Pages

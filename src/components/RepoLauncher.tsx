@@ -19,6 +19,8 @@ const TECH_ICONS = {
 };
 
 const PROVIDER_LABELS: Record<string, string> = {
+  demo: 'Demo AI (Groq)',
+  groq: 'Groq',
   gemini: 'Gemini',
   openai: 'OpenAI',
   anthropic: 'Claude',

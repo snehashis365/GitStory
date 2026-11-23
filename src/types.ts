@@ -164,7 +164,7 @@ export interface MilestoneAlert {
   isSimulated?: boolean;
 }
 
-export type AIProviderType = 'gemini' | 'openai' | 'anthropic' | 'nvidia' | 'local';
+export type AIProviderType = 'demo' | 'groq' | 'gemini' | 'openai' | 'anthropic' | 'nvidia' | 'local';
 
 export interface AIProviderConfig {
   provider: AIProviderType;

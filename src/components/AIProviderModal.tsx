@@ -11,6 +11,8 @@ import {
   AnthropicClaudeIcon,
   NvidiaIcon,
   LocalServerIcon,
+  GroqIcon,
+  DemoAiIcon,
 } from './BrandIcons';
 import { fetchAvailableModels, CURATED_MODELS, DEFAULT_AI_MODELS, isStaticDeployment } from '../services/aiService';
 import { getStoredGitHubToken, saveStoredGitHubToken } from '../services/githubService';
@@ -25,6 +27,24 @@ const PROVIDERS: {
   defaultModel: string;
   note?: string;
 }[] = [
+  {
+    id: 'demo',
+    label: 'Demo Gateway (Groq)',
+    icon: DemoAiIcon,
+    placeholder: 'No API key required',
+    docsUrl: 'https://groq.com',
+    defaultModel: 'openai/gpt-oss-120b',
+    note: '⚡ Powered by Groq Cloud + Cloudflare Edge Gateway running openai/gpt-oss-120b. No API key needed. Rate limited to 6 req/min.',
+  },
+  {
+    id: 'groq',
+    label: 'Groq Cloud (BYOK)',
+    icon: GroqIcon,
+    placeholder: 'gsk_...',
+    docsUrl: 'https://console.groq.com/keys',
+    defaultModel: 'openai/gpt-oss-120b',
+    note: '🎁 Free API key at console.groq.com (no credit card needed). Blazing fast ~500 tok/sec inference.',
+  },
   {
     id: 'gemini',
     label: 'Google Gemini',
@@ -74,13 +94,23 @@ const PROVIDERS: {
 const STORAGE_KEY = 'gitstory_ai_config_v1';
 const LEGACY_STORAGE_KEY = 'pulseisle_ai_config_v1';
 
-export function loadAIConfig(): AIProviderConfig | null {
+export function loadAIConfig(): AIProviderConfig {
   try {
     const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
-    if (!raw) return null;
+    if (!raw) {
+      return {
+        provider: 'demo',
+        apiKey: '',
+        model: 'openai/gpt-oss-120b',
+      };
+    }
     return JSON.parse(raw) as AIProviderConfig;
   } catch {
-    return null;
+    return {
+      provider: 'demo',
+      apiKey: '',
+      model: 'openai/gpt-oss-120b',
+    };
   }
 }
 
@@ -110,9 +140,9 @@ function useModelList(provider: AIProviderType, apiKey: string, localEndpoint: s
   }, [provider]);
 
   const trigger = useCallback(() => {
-    // Anthropic: already using curated list, no external call needed
-    if (provider === 'anthropic') {
-      setModels(CURATED_MODELS.anthropic);
+    // Anthropic and Demo: already using curated list, no external call needed
+    if (provider === 'anthropic' || provider === 'demo') {
+      setModels(CURATED_MODELS[provider]);
       setFetchState('ok');
       setFetchError(null);
       return;
@@ -257,7 +287,7 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (provider !== 'local' && !apiKey.trim()) {
+    if (provider !== 'local' && provider !== 'demo' && !apiKey.trim()) {
       setSubmitError('Please enter your API key.');
       return;
     }
@@ -362,43 +392,67 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
         </div>
       )}
 
-      {/* API Key */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-semibold text-[#0F172A]">
-            {provider === 'local' ? 'API Key (optional)' : 'API Key'}
-          </label>
-          <a
-            href={meta.docsUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 text-xs font-medium text-[#0D9488] hover:underline"
-          >
-            {provider === 'gemini' ? 'Get free key' : 'Get key'} <ExternalLink className="h-3 w-3" />
-          </a>
+      {/* API Key or Demo Gateway Banner */}
+      {provider === 'demo' ? (
+        <div className="rounded-2xl border border-teal-200 dark:border-teal-500/30 bg-teal-50/50 dark:bg-teal-500/10 p-3.5 space-y-1.5">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-teal-800 dark:text-teal-300">
+            <Sparkles className="h-4 w-4 text-[#FF5A5F]" />
+            <span>Community Demo Mode Active</span>
+          </div>
+          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            Requests are processed through the Cloudflare Edge Gateway running Groq&apos;s ultra-fast{' '}
+            <code className="rounded bg-teal-100 dark:bg-teal-900/60 px-1 py-0.5 text-teal-800 dark:text-teal-200 font-mono text-[11px]">openai/gpt-oss-120b</code>.
+            No API key required! Rate limited to 6 requests/minute.
+          </p>
+          <div className="pt-1 flex items-center gap-2">
+            <span className="text-[11px] text-slate-500">Hit the limit or want higher quotas?</span>
+            <button
+              type="button"
+              onClick={() => handleProviderChange('groq')}
+              className="text-xs font-semibold text-[#0D9488] dark:text-[#2DD4BF] hover:underline cursor-pointer"
+            >
+              Bring Your Own Groq Key →
+            </button>
+          </div>
         </div>
-        <div className="relative">
-          <input
-            type={showKey ? 'text' : 'password'}
-            value={apiKey}
-            onChange={(e) => { setApiKey(e.target.value); setSubmitError(null); }}
-            placeholder={meta.placeholder}
-            autoComplete="off"
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-4 py-3 pr-11 text-sm font-mono text-[#0F172A] dark:text-slate-100 focus:border-[#FF5A5F] focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20"
-          />
-          <button
-            type="button"
-            onClick={() => setShowKey((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
-            aria-label={showKey ? 'Hide key' : 'Show key'}
-          >
-            {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
+      ) : (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold text-[#0F172A]">
+              {provider === 'local' ? 'API Key (optional)' : 'API Key'}
+            </label>
+            <a
+              href={meta.docsUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-medium text-[#0D9488] hover:underline"
+            >
+              {provider === 'gemini' || provider === 'groq' ? 'Get free key' : 'Get key'} <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+          <div className="relative">
+            <input
+              type={showKey ? 'text' : 'password'}
+              value={apiKey}
+              onChange={(e) => { setApiKey(e.target.value); setSubmitError(null); }}
+              placeholder={meta.placeholder}
+              autoComplete="off"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-4 py-3 pr-11 text-sm font-mono text-[#0F172A] dark:text-slate-100 focus:border-[#FF5A5F] focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20"
+            />
+            <button
+              type="button"
+              onClick={() => setShowKey((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+              aria-label={showKey ? 'Hide key' : 'Show key'}
+            >
+              {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+          <p className="text-xs text-slate-500">
+            Stored locally in your browser only. Never sent to any third party.
+          </p>
         </div>
-        <p className="text-xs text-slate-500">
-          Stored locally in your browser only. Never sent to any third party.
-        </p>
-      </div>
+      )}
 
       {/* Model selector */}
       {modelField}

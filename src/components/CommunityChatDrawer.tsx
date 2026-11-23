@@ -176,7 +176,7 @@ export function CommunityChatDrawer({
     setIsStreaming(true);
 
     try {
-      if (!aiConfig || (!aiConfig.apiKey && aiConfig.provider !== 'local')) {
+      if (!aiConfig || (!aiConfig.apiKey && aiConfig.provider !== 'local' && aiConfig.provider !== 'demo')) {
         throw new Error('Please configure your AI Provider API key to start chatting.');
       }
 
@@ -334,10 +334,22 @@ export function CommunityChatDrawer({
               {chatError && (
                 <div
                   role="alert"
-                  className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700"
+                  className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 p-3 text-xs text-red-700 dark:text-red-300 space-y-2"
                 >
-                  <p className="font-semibold">Couldn&apos;t reach the AI guide</p>
-                  <p className="mt-0.5">{chatError}</p>
+                  <div>
+                    <p className="font-semibold">Couldn&apos;t reach the AI guide</p>
+                    <p className="mt-0.5">{chatError}</p>
+                  </div>
+                  {onOpenAIConfig && (
+                    <button
+                      type="button"
+                      onClick={onOpenAIConfig}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 transition-colors cursor-pointer"
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      <span>Bring Your Own Key (BYOK)</span>
+                    </button>
+                  )}
                 </div>
               )}
 

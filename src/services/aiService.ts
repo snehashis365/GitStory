@@ -7,6 +7,8 @@ import type {
 } from '../types';
 
 export const DEFAULT_AI_MODELS: Record<AIProviderType, string> = {
+  demo: 'openai/gpt-oss-120b',
+  groq: 'openai/gpt-oss-120b',
   gemini: 'gemini-2.5-flash',
   openai: 'gpt-4o-mini',
   anthropic: 'claude-3-5-haiku-latest',
@@ -15,6 +17,18 @@ export const DEFAULT_AI_MODELS: Record<AIProviderType, string> = {
 };
 
 export const CURATED_MODELS: Record<AIProviderType, string[]> = {
+  demo: [
+    'openai/gpt-oss-120b',
+    'llama-3.3-70b-versatile',
+    'llama-3.1-8b-instant',
+  ],
+  groq: [
+    'openai/gpt-oss-120b',
+    'llama-3.3-70b-versatile',
+    'llama-3.1-8b-instant',
+    'mixtral-8x7b-32768',
+    'deepseek-r1-distill-llama-70b',
+  ],
   gemini: [
     'gemini-2.5-flash',
     'gemini-2.5-pro',
@@ -51,6 +65,12 @@ export const CURATED_MODELS: Record<AIProviderType, string[]> = {
     'qwen2.5-coder',
   ],
 };
+
+export function getDemoAiProxyUrl(): string {
+  const envUrl = (import.meta.env.VITE_DEMO_AI_PROXY_URL as string | undefined)?.trim();
+  if (envUrl) return envUrl.replace(/\/$/, '');
+  return 'https://gitstory-ai-proxy.workers.dev';
+}
 
 export function isStaticDeployment(): boolean {
   if (typeof window === 'undefined') return false;
@@ -99,6 +119,28 @@ export async function fetchAvailableModelsDirect(
   apiKey: string,
   localEndpoint?: string
 ): Promise<string[]> {
+  if (provider === 'demo') {
+    return CURATED_MODELS.demo;
+  }
+
+  if (provider === 'groq') {
+    if (!apiKey.trim()) return CURATED_MODELS.groq;
+    try {
+      const resp = await fetch('https://api.groq.com/openai/v1/models', {
+        headers: { Authorization: `Bearer ${apiKey.trim()}` },
+      });
+      if (resp.ok) {
+        const data = (await resp.json()) as { data?: { id: string }[] };
+        if (Array.isArray(data.data) && data.data.length > 0) {
+          return data.data.map((m) => m.id);
+        }
+      }
+    } catch {
+      // Fallback
+    }
+    return CURATED_MODELS.groq;
+  }
+
   if (provider === 'anthropic') {
     return [
       'claude-3-7-sonnet-latest',
@@ -294,14 +336,42 @@ Respond with ONLY a valid JSON object (no markdown, no code fences) matching exa
     }
     const data = (await resp.json()) as { content?: { text: string }[] };
     rawJson = data.content?.[0]?.text || '';
+  } else if (provider === 'demo') {
+    const proxyUrl = getDemoAiProxyUrl();
+    const resp = await fetch(`${proxyUrl}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: model || 'openai/gpt-oss-120b',
+        messages: [
+          { role: 'system', content: STORY_SYSTEM_PROMPT },
+          { role: 'user', content: userPrompt },
+        ],
+        response_format: { type: 'json_object' },
+      }),
+    });
+
+    if (!resp.ok) {
+      const err = (await resp.json().catch(() => ({}))) as { error?: { message?: string; code?: string } };
+      if (resp.status === 429 || err.error?.code === 'demo_rate_limit_exceeded') {
+        throw new Error(
+          'Demo rate limit reached for this session. Please add your own free Gemini, Groq, or OpenAI key in settings to continue exploring!'
+        );
+      }
+      throw new Error(err.error?.message || `Demo AI error ${resp.status}`);
+    }
+    const data = (await resp.json()) as { choices?: { message?: { content?: string } }[] };
+    rawJson = data.choices?.[0]?.message?.content || '';
   } else {
-    // OpenAI, NVIDIA, or Local Endpoint
+    // Groq, OpenAI, NVIDIA, or Local Endpoint
     const baseUrl =
-      provider === 'nvidia'
-        ? 'https://integrate.api.nvidia.com/v1'
-        : provider === 'local'
-          ? (localEndpoint?.replace(/\/$/, '') ?? 'http://localhost:11434/v1')
-          : 'https://api.openai.com/v1';
+      provider === 'groq'
+        ? 'https://api.groq.com/openai/v1'
+        : provider === 'nvidia'
+          ? 'https://integrate.api.nvidia.com/v1'
+          : provider === 'local'
+            ? (localEndpoint?.replace(/\/$/, '') ?? 'http://localhost:11434/v1')
+            : 'https://api.openai.com/v1';
 
     const resp = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
@@ -553,13 +623,17 @@ ${repoContext}`;
     return;
   }
 
-  // OpenAI-compatible: OpenAI, NVIDIA, Local Endpoint
-  const baseUrl =
-    provider === 'nvidia'
-      ? 'https://integrate.api.nvidia.com/v1'
-      : provider === 'local'
-        ? (localEndpoint?.replace(/\/$/, '') ?? 'http://localhost:11434/v1')
-        : 'https://api.openai.com/v1';
+  // OpenAI-compatible: Demo (Groq Gateway), Groq Cloud, OpenAI, NVIDIA, Local Endpoint
+  const isDemo = provider === 'demo';
+  const baseUrl = isDemo
+    ? `${getDemoAiProxyUrl()}/v1`
+    : provider === 'groq'
+      ? 'https://api.groq.com/openai/v1'
+      : provider === 'nvidia'
+        ? 'https://integrate.api.nvidia.com/v1'
+        : provider === 'local'
+          ? (localEndpoint?.replace(/\/$/, '') ?? 'http://localhost:11434/v1')
+          : 'https://api.openai.com/v1';
 
   const messages = [
     { role: 'system', content: systemPrompt },
@@ -569,14 +643,18 @@ ${repoContext}`;
     })),
   ];
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (!isDemo && apiKey) {
+    headers['Authorization'] = `Bearer ${apiKey}`;
+  }
+
   const resp = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify({
-      model,
+      model: model || 'openai/gpt-oss-120b',
       messages,
       stream: true,
     }),
@@ -584,7 +662,13 @@ ${repoContext}`;
   });
 
   if (!resp.ok || !resp.body) {
-    throw new Error(`${provider} stream error ${resp.status}`);
+    const err = (await resp.json().catch(() => ({}))) as { error?: { message?: string; code?: string } };
+    if (resp.status === 429 || err.error?.code === 'demo_rate_limit_exceeded') {
+      throw new Error(
+        'Demo rate limit reached. Add your own free Gemini, Groq, or OpenAI key in settings to continue chatting without limits!'
+      );
+    }
+    throw new Error(err.error?.message || `${provider} stream error ${resp.status}`);
   }
 
   const reader = resp.body.getReader();
