@@ -251,7 +251,7 @@ export function ActivityFeed({
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
           {/* Left / Main Column: Thematic AI Progress Chapters */}
           <div className="space-y-5 lg:col-span-7">
-            {digest.progressChapters.map((chapter, idx) => (
+            {(digest.progressChapters || []).map((chapter, idx) => (
               <article
                 key={`${chapter.title}-${idx}`}
                 className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6"
@@ -276,7 +276,7 @@ export function ActivityFeed({
 
                 <p className="mt-3 text-sm leading-relaxed text-slate-600">{chapter.summary}</p>
 
-                {chapter.keyWins.length > 0 && (
+                {Array.isArray(chapter.keyWins) && chapter.keyWins.length > 0 && (
                   <ul className="mt-4 space-y-2 border-t border-slate-100 pt-4">
                     {chapter.keyWins.map((win, wIdx) => (
                       <li
@@ -358,7 +358,7 @@ export function ActivityFeed({
                       `Version ${latestRelease.tagName} is live for the community!`}
                   </p>
 
-                  {releaseAi && releaseAi.highlights.length > 0 && (
+                  {releaseAi && Array.isArray(releaseAi.highlights) && releaseAi.highlights.length > 0 && (
                     <ul className="mt-4 space-y-2.5 border-t border-slate-100 pt-4">
                       {releaseAi.highlights.map((hl, idx) => (
                         <li key={idx} className="flex items-start gap-2.5 text-sm text-slate-700">
@@ -416,7 +416,7 @@ export function ActivityFeed({
             </div>
 
             {/* Jargon Decoder Card */}
-            {digest.jargonDecoder.length > 0 && (
+            {Array.isArray(digest.jargonDecoder) && digest.jargonDecoder.length > 0 && (
               <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6">
                 <div className="flex items-center justify-between gap-2">
                   <div>
@@ -431,7 +431,7 @@ export function ActivityFeed({
                 </div>
 
                 <div className="mt-4 divide-y divide-slate-100">
-                  {digest.jargonDecoder.map((item, idx) => (
+                  {(digest.jargonDecoder || []).map((item, idx) => (
                     <div key={idx} className="py-3.5 first:pt-1 last:pb-0">
                       <div className="flex items-center gap-2.5">
                         <CategoryBadge category="jargon" size="xs" />

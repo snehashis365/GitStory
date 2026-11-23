@@ -22,6 +22,7 @@ import {
   Pause,
   Play,
   RefreshCw,
+  RotateCcw,
   Search,
   Sparkles,
   Star,
@@ -48,7 +49,7 @@ import {
 } from './components/NotificationCenter';
 import { AIProviderModal, loadAIConfig, clearAIConfig } from './components/AIProviderModal';
 import { calculateAdaptiveSyncInterval, type CadenceInfo } from './utils/cadence';
-import { loadCachedDigest, saveCachedDigest } from './utils/digestCache';
+import { loadCachedDigest, saveCachedDigest, clearAllRepoCache } from './utils/digestCache';
 import { fetchRepoSnapshot, fetchRepoReadme } from './services/githubService';
 import {
   generateStoryDigest,
@@ -434,6 +435,14 @@ export default function App() {
     [snapshot, readmeOverview, aiConfig]
   );
 
+  const handleClearRepoCache = useCallback(() => {
+    if (!snapshot) return;
+    clearAllRepoCache(snapshot.repo.fullName);
+    setDigest(null);
+    setReadmeOverview(null);
+    void fetchAiSummary(snapshot, { forceRefresh: true });
+  }, [snapshot, fetchAiSummary]);
+
   const handleSwitcherSubmit = (e: FormEvent) => {
     e.preventDefault();
     const normalized = normalizeRepoInput(switcherInput);
@@ -673,6 +682,16 @@ export default function App() {
                 className={`h-3.5 w-3.5 text-[#0D9488] ${isSyncing ? 'animate-spin' : ''}`}
               />
               <span>Sync Now</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleClearRepoCache}
+              title="Clear cached AI summaries and reload fresh"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-700 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-900 transition-colors whitespace-nowrap cursor-pointer"
+            >
+              <RotateCcw className="h-3.5 w-3.5 text-rose-500" />
+              <span>Clear Cache</span>
             </button>
 
             {notifState !== 'unsupported' && notifState !== 'granted' && (
@@ -964,7 +983,7 @@ export default function App() {
                       Core Superpowers
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {readmeOverview.superpowers.map((sp, idx) => (
+                      {(readmeOverview.superpowers || []).map((sp, idx) => (
                         <div
                           key={idx}
                           className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-[#F8FAFC] dark:bg-slate-900/60 p-4"
@@ -982,7 +1001,7 @@ export default function App() {
                   </div>
 
                   {/* Target Audience Badges */}
-                  {readmeOverview.targetAudience.length > 0 && (
+                  {Array.isArray(readmeOverview.targetAudience) && readmeOverview.targetAudience.length > 0 && (
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                       <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                         Built for:

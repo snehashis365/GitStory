@@ -6,6 +6,7 @@ import type {
   ReadmeOverview,
   RepoSnapshot,
 } from '../types';
+import { sanitizeDigest } from '../utils/digestCache';
 
 export const DEFAULT_AI_MODELS: Record<AIProviderType, string> = {
   demo: 'openai/gpt-oss-120b',
@@ -518,7 +519,7 @@ Respond with ONLY a valid JSON object (no markdown, no code fences, no reasoning
 
   const parsed = extractJsonDigest(rawJson);
 
-  return {
+  const rawCandidate = {
     ...parsed,
     milestoneProgressPct: Math.min(98, Math.max(15, Number(parsed.milestoneProgressPct) || 68)),
     progressChapters: Array.isArray(parsed.progressChapters) ? parsed.progressChapters : [],
@@ -533,6 +534,19 @@ Respond with ONLY a valid JSON object (no markdown, no code fences, no reasoning
     commitTranslations: Array.isArray(parsed.commitTranslations) ? parsed.commitTranslations : [],
     prTranslations: Array.isArray(parsed.prTranslations) ? parsed.prTranslations : [],
     generatedAt: new Date().toISOString(),
+  };
+
+  const sanitized = sanitizeDigest(rawCandidate);
+  if (sanitized) return sanitized;
+
+  return {
+    ...rawCandidate,
+    headline: 'Recent updates synthesized',
+    playfulSummary: 'Recent project activity has been gathered for this repo.',
+    momentumMood: 'Steady Progress',
+    momentumEmoji: '🚀',
+    nextMilestoneEstimate: 'Upcoming release',
+    milestoneProgressPct: 70,
   };
 }
 
@@ -822,11 +836,75 @@ ${repoContext}`;
 const README_SYSTEM_PROMPT =
   'You are GitStory’s executive project explainer. Your job is to transform a repository’s technical README and metadata into an inspiring, jargon-free Project Primer for non-developers, product leaders, stakeholders, and curious fans. Strip out installation commands, npm scripts, compiler flags, Docker commands, CI badges, sponsor lists, and dense technical jargon. Instead, explain the real-world human purpose, what problem it solves, why it is cool, and who uses it. Respond with ONLY a single raw valid JSON object matching the requested schema, without markdown code fences or conversational filler.';
 
+export function sanitizeReadmeOverview(raw: unknown): ReadmeOverview | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+
+  const analogy = typeof r.analogy === 'string' && r.analogy.trim()
+    ? r.analogy.trim()
+    : 'Think of it as a creative toolkit for this project.';
+  const oneLiner = typeof r.oneLiner === 'string' && r.oneLiner.trim()
+    ? r.oneLiner.trim()
+    : 'An open-source software project.';
+  const problemSolved = typeof r.problemSolved === 'string' && r.problemSolved.trim()
+    ? r.problemSolved.trim()
+    : 'Before this project, solving this workflow required complex custom setups and manual effort.';
+  const howItWorks = typeof r.howItWorks === 'string' && r.howItWorks.trim()
+    ? r.howItWorks.trim()
+    : 'This repository provides an automated, streamlined solution engineered directly for the community.';
+
+  const superpowers = Array.isArray(r.superpowers)
+    ? r.superpowers
+        .filter((sp): sp is Record<string, unknown> => !!sp && typeof sp === 'object')
+        .map((sp) => ({
+          emoji: typeof sp.emoji === 'string' && sp.emoji.trim() ? sp.emoji : '⚡',
+          title: typeof sp.title === 'string' && sp.title.trim() ? sp.title : 'High Performance & Speed',
+          description: typeof sp.description === 'string' ? sp.description : 'Engineered for smooth execution and rapid feedback cycles.',
+        }))
+    : [];
+
+  const targetAudience = Array.isArray(r.targetAudience)
+    ? r.targetAudience.filter((a): a is string => typeof a === 'string' && a.trim().length > 0)
+    : [];
+
+  return {
+    analogy,
+    oneLiner,
+    problemSolved,
+    howItWorks,
+    superpowers: superpowers.length > 0
+      ? superpowers
+      : [
+          {
+            emoji: '⚡',
+            title: 'High Performance & Speed',
+            description: 'Engineered for smooth execution and rapid feedback cycles.',
+          },
+          {
+            emoji: '🛠️',
+            title: 'Community-Driven Polish',
+            description: 'Actively maintained and refined through open collaboration.',
+          },
+        ],
+    targetAudience: targetAudience.length > 0
+      ? targetAudience
+      : ['Developers', 'Project Enthusiasts', 'Open Source Community'],
+    rawReadmeSnippet: typeof r.rawReadmeSnippet === 'string' ? r.rawReadmeSnippet : undefined,
+    generatedAt: typeof r.generatedAt === 'string' ? r.generatedAt : new Date().toISOString(),
+  };
+}
+
 export function loadCachedReadmeOverview(repoFullName: string): ReadmeOverview | null {
   try {
-    const raw = localStorage.getItem(`gitstory_readme_overview_v1_${repoFullName.toLowerCase()}`);
+    const key = `gitstory_readme_overview_v1_${repoFullName.toLowerCase()}`;
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
-    return JSON.parse(raw) as ReadmeOverview;
+    const parsed = JSON.parse(raw);
+    const sanitized = sanitizeReadmeOverview(parsed);
+    if (sanitized) return sanitized;
+    // Purge corrupted cached item
+    localStorage.removeItem(key);
+    return null;
   } catch {
     return null;
   }
@@ -834,9 +912,11 @@ export function loadCachedReadmeOverview(repoFullName: string): ReadmeOverview |
 
 export function saveCachedReadmeOverview(repoFullName: string, overview: ReadmeOverview): void {
   try {
+    const sanitized = sanitizeReadmeOverview(overview);
+    if (!sanitized) return;
     localStorage.setItem(
       `gitstory_readme_overview_v1_${repoFullName.toLowerCase()}`,
-      JSON.stringify(overview)
+      JSON.stringify(sanitized)
     );
   } catch {
     // Ignore storage errors
@@ -1047,7 +1127,7 @@ Output ONLY a valid JSON object matching this schema:
     }
   }
 
-  return {
+  const candidate = {
     analogy: String(parsed.analogy || `Think of it as a creative toolkit for ${repo.fullName}.`),
     oneLiner: String(parsed.oneLiner || repo.description || 'An open-source software project.'),
     problemSolved: String(
@@ -1078,4 +1158,6 @@ Output ONLY a valid JSON object matching this schema:
     rawReadmeSnippet: rawReadme.slice(0, 3000),
     generatedAt: new Date().toISOString(),
   };
+
+  return sanitizeReadmeOverview(candidate)!;
 }
