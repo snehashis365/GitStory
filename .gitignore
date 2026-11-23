@@ -6,3 +6,7 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Local IDE and AI Studio workspaces
+.aistudio/
+.antigravity/
