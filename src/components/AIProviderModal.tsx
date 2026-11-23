@@ -41,7 +41,7 @@ const PROVIDERS: {
     placeholder: 'No API key required',
     docsUrl: 'https://groq.com',
     defaultModel: 'openai/gpt-oss-120b',
-    note: '⚡ Powered by Groq Cloud + Cloudflare Edge Gateway running openai/gpt-oss-120b. No API key needed. Rate limited to 6 req/min.',
+    note: '⚡ Powered by Groq Cloud + Cloudflare Edge Gateway running openai/gpt-oss-120b. No API key needed. Rate limited to 12 req/min.',
   },
   {
     id: 'groq',
@@ -412,7 +412,7 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
           <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
             Requests are processed through the Cloudflare Edge Gateway running Groq&apos;s ultra-fast{' '}
             <code className="rounded bg-teal-100 dark:bg-teal-900/60 px-1 py-0.5 text-teal-800 dark:text-teal-200 font-mono text-[11px]">openai/gpt-oss-120b</code>.
-            No API key required! Rate limited to 6 requests/minute.
+            No API key required! Rate limited to 12 requests/minute.
           </p>
           <div className="pt-1 flex items-center gap-2">
             <span className="text-[11px] text-slate-500">Hit the limit or want higher quotas?</span>

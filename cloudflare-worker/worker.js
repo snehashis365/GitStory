@@ -89,6 +89,7 @@ export default {
           status: 'ok',
           service: 'GitStory AI & GitHub Proxy',
           defaultModel: DEFAULT_MODEL,
+          allowedModels: Array.from(ALLOWED_MODELS),
           rateLimit: `${MAX_REQUESTS_PER_WINDOW} req / ${RATE_LIMIT_WINDOW_MS / 1000}s per IP`,
           features: {
             aiGateway: true,
