@@ -197,27 +197,18 @@ export default function App() {
     [aiConfig, getAIHeaders]
   );
 
-  const handleApplyAIConfig = useCallback(
-    (cfg: AIProviderConfig) => {
-      setAiConfig(cfg);
-      setShowProviderModal(false);
-      if (snapshot) {
-        const cached = loadCachedDigest(snapshot, cfg.provider, cfg.model || '');
-        if (cached) {
-          setDigest(cached);
-          setAiError(null);
-        } else {
-          setDigest(null);
-          void fetchAiSummary(snapshot, { configOverride: cfg });
-        }
-      }
-    },
-    [snapshot, fetchAiSummary]
-  );
-
   const loadRepository = useCallback(
-    async (repoInput: string, options?: { isBackgroundSync?: boolean }) => {
+    async (
+      repoInput: string,
+      options?: {
+        isBackgroundSync?: boolean;
+        configOverride?: AIProviderConfig;
+        forceRefreshAi?: boolean;
+        forceSyncRepo?: boolean;
+      }
+    ) => {
       const isBg = Boolean(options?.isBackgroundSync);
+      const forceRepo = Boolean(options?.forceSyncRepo);
       if (isBg) {
         setIsSyncing(true);
       } else {
@@ -227,7 +218,7 @@ export default function App() {
       }
 
       try {
-        const data = await fetchRepoSnapshot(repoInput, { forceSync: isBg });
+        const data = await fetchRepoSnapshot(repoInput, { forceSync: isBg || forceRepo });
 
         const latestSha = data.commits[0]?.sha || null;
         const latestTag = data.releases[0]?.tagName || null;
@@ -281,16 +272,17 @@ export default function App() {
           setSwitcherError(null);
           setRecentRepos(saveRecentRepo(data.repo.fullName));
 
-          const provider = aiConfig?.provider || 'default';
-          const model = aiConfig?.model || '';
-          const cached = loadCachedDigest(data, provider, model);
+          const activeCfg = options?.configOverride ?? aiConfig;
+          const provider = activeCfg?.provider || 'default';
+          const model = activeCfg?.model || '';
+          const cached = options?.forceRefreshAi ? null : loadCachedDigest(data, provider, model);
 
           if (cached) {
             setDigest(cached);
             setAiError(null);
           } else {
             setDigest(null);
-            void fetchAiSummary(data);
+            void fetchAiSummary(data, { configOverride: activeCfg ?? undefined, forceRefresh: options?.forceRefreshAi });
           }
         }
 
@@ -312,6 +304,22 @@ export default function App() {
       }
     },
     [aiConfig, fetchAiSummary, pushMilestoneAlert]
+  );
+
+  const handleApplyAIConfig = useCallback(
+    (cfg: AIProviderConfig) => {
+      setAiConfig(cfg);
+      setShowProviderModal(false);
+      if (snapshot) {
+        // Refetch snapshot with current sync depth and regenerate briefing with new config
+        void loadRepository(snapshot.repo.fullName, {
+          configOverride: cfg,
+          forceRefreshAi: true,
+          forceSyncRepo: true,
+        });
+      }
+    },
+    [snapshot, loadRepository]
   );
 
   // Smart adaptive auto-sync loop (waits for AI generation to finish before next sync)

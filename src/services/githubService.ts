@@ -9,6 +9,60 @@ import type {
 import { getDemoAiProxyUrl } from './aiService';
 
 const GH_TOKEN_KEY = 'gitstory_github_token_v1';
+const SYNC_DEPTH_KEY = 'gitstory_sync_depth_v1';
+
+export interface SyncDepthConfig {
+  maxCommits: number;
+  maxPRs: number;
+}
+
+export const SYNC_DEPTH_PRESETS: { id: string; label: string; description: string; depth: SyncDepthConfig }[] = [
+  {
+    id: 'balanced',
+    label: 'Balanced',
+    description: '15 commits · 10 PRs (Fastest load)',
+    depth: { maxCommits: 15, maxPRs: 10 },
+  },
+  {
+    id: 'deep',
+    label: 'Deep',
+    description: '30 commits · 20 PRs (Recommended)',
+    depth: { maxCommits: 30, maxPRs: 20 },
+  },
+  {
+    id: 'extensive',
+    label: 'Extensive',
+    description: '50 commits · 30 PRs (Deep context)',
+    depth: { maxCommits: 50, maxPRs: 30 },
+  },
+];
+
+export const DEFAULT_SYNC_DEPTH: SyncDepthConfig = {
+  maxCommits: 30,
+  maxPRs: 20,
+};
+
+export function getStoredSyncDepth(): SyncDepthConfig {
+  try {
+    const raw = localStorage.getItem(SYNC_DEPTH_KEY);
+    if (!raw) return DEFAULT_SYNC_DEPTH;
+    const parsed = JSON.parse(raw) as Partial<SyncDepthConfig>;
+    return {
+      maxCommits: Math.min(100, Math.max(10, Number(parsed.maxCommits) || DEFAULT_SYNC_DEPTH.maxCommits)),
+      maxPRs: Math.min(50, Math.max(5, Number(parsed.maxPRs) || DEFAULT_SYNC_DEPTH.maxPRs)),
+    };
+  } catch {
+    return DEFAULT_SYNC_DEPTH;
+  }
+}
+
+export function saveStoredSyncDepth(config: SyncDepthConfig) {
+  try {
+    localStorage.setItem(SYNC_DEPTH_KEY, JSON.stringify(config));
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 export function getStoredGitHubToken(): string {
   try {
@@ -305,7 +359,7 @@ export function isStaticDeployment(): boolean {
 
 export async function fetchRepoSnapshot(
   rawRepo: string,
-  options?: { forceSync?: boolean; token?: string }
+  options?: { forceSync?: boolean; token?: string; depth?: SyncDepthConfig }
 ): Promise<RepoSnapshot> {
   const forceSync = Boolean(options?.forceSync);
 
@@ -331,7 +385,7 @@ export async function fetchRepoSnapshot(
 
 export async function fetchRepoSnapshotDirect(
   rawRepo: string,
-  options?: { forceSync?: boolean; token?: string }
+  options?: { forceSync?: boolean; token?: string; depth?: SyncDepthConfig }
 ): Promise<RepoSnapshot> {
   const parsed = parseRepoInput(rawRepo);
   if (!parsed) {
@@ -339,6 +393,10 @@ export async function fetchRepoSnapshotDirect(
       'Please enter a valid GitHub URL (https://github.com/owner/repo) or owner/repo handle.'
     );
   }
+
+  const depth = options?.depth || getStoredSyncDepth();
+  const maxCommits = depth.maxCommits;
+  const maxPRs = depth.maxPRs;
 
   const { owner, repo } = parsed;
   const cacheKey = `${owner}/${repo}`.toLowerCase();
@@ -386,9 +444,9 @@ export async function fetchRepoSnapshotDirect(
     totalPullsRes,
   ] = await Promise.all([
     githubFetch<Record<string, unknown>>(base, token, forceSync),
-    githubFetch<Record<string, unknown>[]>(`${base}/commits?per_page=15`, token, forceSync),
+    githubFetch<Record<string, unknown>[]>(`${base}/commits?per_page=${maxCommits}`, token, forceSync),
     githubFetch<Record<string, unknown>[]>(
-      `${base}/pulls?state=closed&sort=updated&direction=desc&per_page=16`,
+      `${base}/pulls?state=closed&sort=updated&direction=desc&per_page=${Math.min(100, Math.max(20, maxPRs * 2))}`,
       token,
       forceSync
     ).catch(() => ({
@@ -467,7 +525,7 @@ export async function fetchRepoSnapshotDirect(
 
   const mergedPRs: PullRequestItem[] = (pullsRes.data || [])
     .filter((pr) => Boolean(pr.merged_at))
-    .slice(0, 10)
+    .slice(0, maxPRs)
     .map((pr) => {
       const user = (pr.user as Record<string, unknown>) || {};
       const labels = Array.isArray(pr.labels)

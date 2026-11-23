@@ -15,7 +15,14 @@ import {
   DemoAiIcon,
 } from './BrandIcons';
 import { fetchAvailableModels, CURATED_MODELS, DEFAULT_AI_MODELS, isStaticDeployment } from '../services/aiService';
-import { getStoredGitHubToken, saveStoredGitHubToken } from '../services/githubService';
+import {
+  getStoredGitHubToken,
+  saveStoredGitHubToken,
+  getStoredSyncDepth,
+  saveStoredSyncDepth,
+  SYNC_DEPTH_PRESETS,
+  type SyncDepthConfig,
+} from '../services/githubService';
 
 // ─── Provider metadata ────────────────────────────────────────────────────────
 const PROVIDERS: {
@@ -217,6 +224,7 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
   const [showKey, setShowKey] = useState(false);
   const [isCustomModel, setIsCustomModel] = useState(false);
   const [ghToken, setGhToken] = useState(() => getStoredGitHubToken());
+  const [syncDepth, setSyncDepth] = useState<SyncDepthConfig>(() => getStoredSyncDepth());
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Sync state whenever modal is opened so it always reflects current saved settings
@@ -230,6 +238,7 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
       setModel(currentModel);
       setLocalEndpoint(current?.localEndpoint ?? 'http://localhost:11434/v1');
       setGhToken(getStoredGitHubToken());
+      setSyncDepth(getStoredSyncDepth());
       setShowKey(false);
       setSubmitError(null);
 
@@ -307,6 +316,7 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
     };
     saveAIConfig(cfg);
     saveStoredGitHubToken(ghToken);
+    saveStoredSyncDepth(syncDepth);
     onConfirm(cfg);
   };
 
@@ -457,6 +467,43 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
       {/* Model selector */}
       {modelField}
 
+      {/* Sync & Synthesis Depth */}
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/70 p-3.5 space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+            Sync &amp; Synthesis Depth
+          </label>
+          <span className="text-[11px] font-mono font-medium text-[#0D9488] dark:text-[#2DD4BF]">
+            {syncDepth.maxCommits} commits · {syncDepth.maxPRs} PRs
+          </span>
+        </div>
+        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+          Controls how many recent commits and merged pull requests are fetched and analyzed by AI.
+        </p>
+        <div className="grid grid-cols-3 gap-1.5 pt-1">
+          {SYNC_DEPTH_PRESETS.map((preset) => {
+            const isSelected =
+              syncDepth.maxCommits === preset.depth.maxCommits &&
+              syncDepth.maxPRs === preset.depth.maxPRs;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => setSyncDepth(preset.depth)}
+                className={`rounded-xl px-2.5 py-2 text-left text-xs transition-all border cursor-pointer ${
+                  isSelected
+                    ? 'border-[#0D9488] bg-[#0D9488]/10 text-[#0D9488] dark:text-[#2DD4BF] font-semibold'
+                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
+                }`}
+              >
+                <div className="font-semibold">{preset.label}</div>
+                <div className="text-[10px] opacity-75">{preset.depth.maxCommits}c / {preset.depth.maxPRs}pr</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Optional GitHub Token */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/70 p-3.5 space-y-1.5">
         <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -522,7 +569,7 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-2xl shadow-slate-900/15 max-h-[92vh] overflow-y-auto"
+            className="w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-7 shadow-2xl shadow-slate-900/15 max-h-[92vh] overflow-y-auto"
           >
             {/* Header */}
             <div className="mb-6 flex items-start justify-between gap-3">
@@ -531,10 +578,10 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
                   <Key className="h-5 w-5 text-[#FF5A5F]" />
                 </div>
                 <div>
-                  <h2 className="font-display text-lg font-bold text-[#0F172A]">
+                  <h2 className="font-display text-lg font-bold text-[#0F172A] dark:text-slate-100">
                     Choose Your AI Provider
                   </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     GitStory works with any major AI provider
                   </p>
                 </div>
@@ -544,7 +591,7 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
                 <button
                   type="button"
                   onClick={onClose}
-                  className="-mr-1.5 -mt-1.5 rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer"
+                  className="-mr-1.5 -mt-1.5 rounded-xl p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
                   aria-label="Close settings"
                   title="Close (Esc)"
                 >
