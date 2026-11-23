@@ -16,7 +16,7 @@ const ALLOWED_MODELS = new Set([
 
 // Rate limiting settings: 6 requests per 60 seconds per IP
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
-const MAX_REQUESTS_PER_WINDOW = 6;
+const MAX_REQUESTS_PER_WINDOW = 12;
 
 // In-memory sliding window rate limiter
 // Note: In Cloudflare Workers, global memory persists across warm requests on the same edge node.
@@ -25,18 +25,18 @@ const ipRequestHistory = new Map();
 function checkRateLimit(ip) {
   const now = Date.now();
   const timestamps = ipRequestHistory.get(ip) || [];
-  
+
   // Clean up timestamps outside the active window
   const activeTimestamps = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-  
+
   if (activeTimestamps.length >= MAX_REQUESTS_PER_WINDOW) {
     ipRequestHistory.set(ip, activeTimestamps);
     return false; // Rate limit exceeded
   }
-  
+
   activeTimestamps.push(now);
   ipRequestHistory.set(ip, activeTimestamps);
-  
+
   // Periodically sweep old IPs if memory grows
   if (ipRequestHistory.size > 2000) {
     for (const [key, list] of ipRequestHistory.entries()) {
@@ -45,7 +45,7 @@ function checkRateLimit(ip) {
       }
     }
   }
-  
+
   return true;
 }
 
@@ -112,7 +112,7 @@ export default {
 
       // Extract subpath (e.g. /github/repos/facebook/react/commits -> /repos/facebook/react/commits)
       const subPath = url.pathname.replace(/^\/github/, '');
-      
+
       // Security: Only allow /repos/* or /search/* endpoints
       if (!subPath.startsWith('/repos/') && !subPath.startsWith('/search/')) {
         return new Response(
