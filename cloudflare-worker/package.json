@@ -1,0 +1,6 @@
+{
+  "name": "gitstory-ai-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GitStory AI Edge Gateway & GitHub Proxy"
+}
