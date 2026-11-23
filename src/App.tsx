@@ -29,6 +29,7 @@ import { ProjectLifecyclePipeline } from './components/ProjectLifecyclePipeline'
 import { VelocityAndContributors } from './components/VelocityAndContributors';
 import { ActivityFeed } from './components/ActivityFeed';
 import { CommunityChatDrawer } from './components/CommunityChatDrawer';
+import { ThemeToggle } from './components/ThemeToggle';
 import {
   getBrowserNotificationState,
   NotificationToastStack,
@@ -457,6 +458,9 @@ export default function App() {
           </nav>
 
           <div className="flex items-center gap-2 shrink-0">
+            {/* 3-Step Theme Toggle: Light > Auto > Dark */}
+            <ThemeToggle />
+
             {/* AI Provider badge + change button */}
             {aiConfig && (
               <button

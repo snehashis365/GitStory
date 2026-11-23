@@ -9,6 +9,7 @@ import {
   ViteFrameworkIcon,
   ThreejsFrameworkIcon,
 } from './BrandIcons';
+import { ThemeToggle } from './ThemeToggle';
 
 const TECH_ICONS = {
   react: ReactFrameworkIcon,
@@ -92,6 +93,9 @@ export function RepoLauncher({
             </a>
           </nav>
           <div className="flex items-center gap-2 shrink-0">
+            {/* 3-Step Theme Toggle: Light > Auto > Dark */}
+            <ThemeToggle />
+
             {/* AI provider pill */}
             {onChangeAI && (
               <button

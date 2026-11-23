@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
@@ -23,6 +25,18 @@
     scroll-behavior: smooth;
     background-color: var(--color-canvas);
     color: var(--color-ink);
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  html.dark {
+    color-scheme: dark;
+    background-color: #0B0F19;
+    color: #F8FAFC;
+  }
+
+  html.dark body {
+    background-color: #0B0F19;
+    color: #F8FAFC;
   }
 
   h1, h2, h3, h4, .font-display {
@@ -33,6 +47,93 @@
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
+}
+
+/* Comprehensive Dark Mode Theme Layer */
+html.dark .bg-white {
+  background-color: #111827;
+}
+
+html.dark .bg-white\/95,
+html.dark .bg-white\/90 {
+  background-color: rgba(17, 24, 39, 0.95);
+}
+
+html.dark .bg-\[\#F8FAFC\] {
+  background-color: #0B0F19;
+}
+
+html.dark .text-\[\#0F172A\] {
+  color: #F8FAFC;
+}
+
+html.dark .border-slate-200,
+html.dark .border-slate-200\/85,
+html.dark .border-slate-200\/80,
+html.dark .border-slate-200\/70,
+html.dark .border-slate-200\/90,
+html.dark .border-slate-100 {
+  border-color: #1F293D;
+}
+
+html.dark .bg-slate-50,
+html.dark .bg-slate-50\/70,
+html.dark .bg-slate-50\/90 {
+  background-color: #162032;
+}
+
+html.dark .bg-slate-100 {
+  background-color: #1E293B;
+}
+
+html.dark .text-slate-600,
+html.dark .text-slate-700 {
+  color: #94A3B8;
+}
+
+html.dark .text-slate-500 {
+  color: #64748B;
+}
+
+html.dark .hover\:bg-slate-50:hover {
+  background-color: #1A2438;
+}
+
+html.dark .hover\:bg-slate-100:hover {
+  background-color: #243048;
+}
+
+html.dark .hover\:text-\[\#0F172A\]:hover {
+  color: #F8FAFC;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  color: #F8FAFC;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748B;
+}
+
+html.dark .recharts-cartesian-grid line {
+  stroke: #1F293D;
+}
+
+html.dark .recharts-cartesian-axis-tick-value {
+  fill: #94A3B8;
+}
+
+html.dark .recharts-default-tooltip {
+  background-color: #111827 !important;
+  border-color: #1F293D !important;
+  color: #F8FAFC !important;
+}
+
+html.dark .recharts-tooltip-item {
+  color: #F8FAFC !important;
 }
 
 @keyframes floatSlow {
