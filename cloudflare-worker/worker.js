@@ -63,7 +63,7 @@ function getCorsHeaders(request) {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-requested-with, if-none-match',
-    'Access-Control-Expose-Headers': 'Link, x-ratelimit-remaining, x-ratelimit-limit, x-proxy-cache',
+    'Access-Control-Expose-Headers': 'Link, x-ratelimit-remaining, x-ratelimit-limit, x-proxy-cache, Retry-After',
     'Access-Control-Max-Age': '86400',
   };
 }
@@ -332,6 +332,26 @@ export default {
           if (retryResponse.ok) {
             groqResponse = retryResponse;
           }
+        }
+      }
+
+      // If Groq returned 429 Too Many Requests (model rate limit or burst TPM exceeded),
+      // seamlessly fallback to a sibling model with an independent rate limit pool (e.g. openai/gpt-oss-20b)
+      if (groqResponse.status === 429 && modelToUse === 'openai/gpt-oss-120b') {
+        const fallbackPayload = {
+          ...groqPayload,
+          model: 'openai/gpt-oss-20b',
+        };
+        const retryResp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${groqApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(fallbackPayload),
+        });
+        if (retryResp.ok) {
+          groqResponse = retryResp;
         }
       }
 

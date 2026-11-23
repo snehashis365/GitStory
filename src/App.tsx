@@ -425,8 +425,12 @@ export default function App() {
         setReadmeOverview(overview);
         saveCachedReadmeOverview(snapshot.repo.fullName, overview);
       } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Unable to generate project overview right now.';
+        const isRateLimit = msg.includes('429') || msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('busy');
         setReadmeError(
-          err instanceof Error ? err.message : 'Unable to generate project overview right now.'
+          isRateLimit
+            ? 'The AI model was momentarily busy during startup. Click "Retry Reading" below to generate.'
+            : msg
         );
       } finally {
         setIsLoadingReadme(false);

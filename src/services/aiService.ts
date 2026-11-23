@@ -86,6 +86,50 @@ export function isStaticDeployment(): boolean {
   );
 }
 
+/**
+ * Executes a fetch request with intelligent retry and backoff on 429 (rate-limiting)
+ * or 503/504 (server busy/overloaded) responses.
+ * Respects Retry-After header when present, defaulting to a 3-second base interval.
+ */
+export async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  maxRetries = 3,
+  baseDelayMs = 3000
+): Promise<Response> {
+  let attempt = 0;
+  while (true) {
+    const resp = await fetch(url, options);
+
+    // Return immediately if successful or if not a rate-limit/server-busy error
+    if (resp.ok || (resp.status !== 429 && resp.status !== 503 && resp.status !== 504)) {
+      return resp;
+    }
+
+    if (attempt >= maxRetries) {
+      return resp;
+    }
+
+    let delay = baseDelayMs * Math.pow(1.2, attempt);
+    const retryAfterHeader = resp.headers.get('retry-after');
+    if (retryAfterHeader) {
+      const parsedSeconds = parseFloat(retryAfterHeader);
+      if (!isNaN(parsedSeconds) && parsedSeconds > 0) {
+        delay = Math.max(parsedSeconds * 1000, 2000);
+      }
+    }
+
+    // Add jitter (0-300ms)
+    delay += Math.floor(Math.random() * 300);
+
+    console.warn(
+      `[GitStory AI] Received ${resp.status} (Rate limited / Busy). Auto-retrying in ${Math.round(delay)}ms (attempt ${attempt + 1}/${maxRetries})...`
+    );
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    attempt++;
+  }
+}
+
 export async function fetchAvailableModels(
   provider: AIProviderType,
   apiKey: string,
@@ -370,7 +414,7 @@ Respond with ONLY a valid JSON object (no markdown, no code fences, no reasoning
     };
     rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   } else if (provider === 'anthropic') {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetchWithRetry('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': apiKey,
@@ -384,7 +428,7 @@ Respond with ONLY a valid JSON object (no markdown, no code fences, no reasoning
         system: STORY_SYSTEM_PROMPT,
         messages: [{ role: 'user', content: userPrompt }],
       }),
-    });
+    }, 3, 3000);
     if (!resp.ok) {
       const err = (await resp.json().catch(() => ({}))) as { error?: { message?: string } };
       throw new Error(err.error?.message || `Anthropic error ${resp.status}`);
@@ -404,18 +448,18 @@ Respond with ONLY a valid JSON object (no markdown, no code fences, no reasoning
       max_completion_tokens: 4096,
     };
 
-    let resp = await fetch(`${proxyUrl}/v1/chat/completions`, {
+    let resp = await fetchWithRetry(`${proxyUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(demoPayload),
-    });
+    }, 3, 3000);
 
     if (!resp.ok) {
       const err = (await resp.json().catch(() => ({}))) as {
         error?: { message?: string; code?: string };
       };
 
-      // Resilient fallback: If Groq rejected strict json_object format, retry with reasoning hidden
+      // Resilient fallback 1: If Groq rejected strict json_object format, retry with reasoning hidden
       if (
         resp.status === 400 &&
         (err.error?.code === 'json_validate_failed' ||
@@ -427,11 +471,27 @@ Respond with ONLY a valid JSON object (no markdown, no code fences, no reasoning
         };
         delete (fallbackPayload as Record<string, unknown>).response_format;
 
-        resp = await fetch(`${proxyUrl}/v1/chat/completions`, {
+        resp = await fetchWithRetry(`${proxyUrl}/v1/chat/completions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(fallbackPayload),
-        });
+        }, 2, 2000);
+      }
+
+      // Resilient fallback 2: If rate limited or busy on 120b, try 20b sibling model
+      if (!resp.ok && (resp.status === 429 || resp.status === 503)) {
+        const siblingFallback = {
+          ...demoPayload,
+          model: 'openai/gpt-oss-20b',
+          reasoning_format: 'hidden',
+        };
+        delete (siblingFallback as Record<string, unknown>).response_format;
+
+        resp = await fetchWithRetry(`${proxyUrl}/v1/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(siblingFallback),
+        }, 2, 2000);
       }
 
       if (!resp.ok) {
@@ -440,7 +500,7 @@ Respond with ONLY a valid JSON object (no markdown, no code fences, no reasoning
         };
         if (resp.status === 429 || errRetry.error?.code === 'demo_rate_limit_exceeded') {
           throw new Error(
-            'Demo rate limit reached for this session. Please add your own free Gemini, Groq, or OpenAI key in settings to continue exploring!'
+            'Demo gateway is experiencing high traffic. Please try again in a few moments, or connect your free API key in settings.'
           );
         }
         throw new Error(errRetry.error?.message || `Demo AI error ${resp.status}`);
@@ -473,14 +533,14 @@ Respond with ONLY a valid JSON object (no markdown, no code fences, no reasoning
       reqPayload.reasoning_format = 'parsed';
     }
 
-    let resp = await fetch(`${baseUrl}/chat/completions`, {
+    let resp = await fetchWithRetry(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(reqPayload),
-    });
+    }, 3, 3000);
 
     if (!resp.ok) {
       const err = (await resp.json().catch(() => ({}))) as {
@@ -496,14 +556,14 @@ Respond with ONLY a valid JSON object (no markdown, no code fences, no reasoning
         const retryPayload = { ...reqPayload, reasoning_format: 'hidden' };
         delete (retryPayload as Record<string, unknown>).response_format;
 
-        resp = await fetch(`${baseUrl}/chat/completions`, {
+        resp = await fetchWithRetry(`${baseUrl}/chat/completions`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(retryPayload),
-        });
+        }, 2, 2000);
       }
 
       if (!resp.ok) {
@@ -933,13 +993,13 @@ export async function generateReadmeOverview(
   const model = cfg?.model || DEFAULT_AI_MODELS[provider] || 'openai/gpt-oss-120b';
   const localEndpoint = cfg?.localEndpoint;
 
-  // Clean raw markdown: strip html comments, badge links, and trim to 5,000 chars
+  // Clean raw markdown: strip html comments, badge links, and trim to 3,500 chars (preserves token headroom and avoids rate limits)
   const cleanedReadme = (rawReadme || '')
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/\[!\[.*?\]\(.*?\)\]\(.*?\)/g, '')
     .replace(/!\[.*?\]\(.*?\)/g, '')
     .trim()
-    .slice(0, 5000);
+    .slice(0, 3500);
 
   const promptText = `Repository: ${repo.fullName}
 Description: ${repo.description || 'No description provided.'}
@@ -968,14 +1028,14 @@ Output ONLY a valid JSON object matching this schema:
 
   if (provider === 'gemini') {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
-    const resp = await fetch(url, {
+    const resp = await fetchWithRetry(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: `${README_SYSTEM_PROMPT}\n\n${promptText}` }] }],
         generationConfig: { responseMimeType: 'application/json', temperature: 0.6 },
       }),
-    });
+    }, 3, 3000);
     if (!resp.ok) {
       const e = (await resp.json().catch(() => ({}))) as { error?: { message?: string } };
       throw new Error(e.error?.message || `Gemini error ${resp.status}`);
@@ -985,7 +1045,7 @@ Output ONLY a valid JSON object matching this schema:
     };
     rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   } else if (provider === 'anthropic') {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetchWithRetry('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': apiKey,
@@ -999,7 +1059,7 @@ Output ONLY a valid JSON object matching this schema:
         system: README_SYSTEM_PROMPT,
         messages: [{ role: 'user', content: promptText }],
       }),
-    });
+    }, 3, 3000);
     if (!resp.ok) {
       const err = (await resp.json().catch(() => ({}))) as { error?: { message?: string } };
       throw new Error(err.error?.message || `Anthropic error ${resp.status}`);
@@ -1016,14 +1076,14 @@ Output ONLY a valid JSON object matching this schema:
       ],
       response_format: { type: 'json_object' },
       reasoning_format: 'parsed',
-      max_completion_tokens: 3000,
+      max_completion_tokens: 2500,
     };
 
-    let resp = await fetch(`${proxyUrl}/v1/chat/completions`, {
+    let resp = await fetchWithRetry(`${proxyUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(demoPayload),
-    });
+    }, 3, 3000);
 
     if (!resp.ok) {
       const err = (await resp.json().catch(() => ({}))) as {
@@ -1036,12 +1096,28 @@ Output ONLY a valid JSON object matching this schema:
       ) {
         const fallback = { ...demoPayload, reasoning_format: 'hidden' };
         delete (fallback as Record<string, unknown>).response_format;
-        resp = await fetch(`${proxyUrl}/v1/chat/completions`, {
+        resp = await fetchWithRetry(`${proxyUrl}/v1/chat/completions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(fallback),
-        });
+        }, 2, 2000);
       }
+
+      // Sibling fallback if rate limited or busy on 120b
+      if (!resp.ok && (resp.status === 429 || resp.status === 503)) {
+        const siblingFallback = {
+          ...demoPayload,
+          model: 'openai/gpt-oss-20b',
+          reasoning_format: 'hidden',
+        };
+        delete (siblingFallback as Record<string, unknown>).response_format;
+        resp = await fetchWithRetry(`${proxyUrl}/v1/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(siblingFallback),
+        }, 2, 2000);
+      }
+
       if (!resp.ok) {
         throw new Error(`Demo AI error ${resp.status}`);
       }
@@ -1066,21 +1142,21 @@ Output ONLY a valid JSON object matching this schema:
         { role: 'user', content: promptText },
       ],
       response_format: { type: 'json_object' },
-      max_completion_tokens: 3000,
+      max_completion_tokens: 2500,
     };
 
     if (provider === 'groq') {
       reqPayload.reasoning_format = 'parsed';
     }
 
-    let resp = await fetch(`${baseUrl}/chat/completions`, {
+    let resp = await fetchWithRetry(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(reqPayload),
-    });
+    }, 3, 3000);
 
     if (!resp.ok) {
       const err = (await resp.json().catch(() => ({}))) as {
@@ -1093,14 +1169,14 @@ Output ONLY a valid JSON object matching this schema:
       ) {
         const fallback = { ...reqPayload, reasoning_format: 'hidden' };
         delete (fallback as Record<string, unknown>).response_format;
-        resp = await fetch(`${baseUrl}/chat/completions`, {
+        resp = await fetchWithRetry(`${baseUrl}/chat/completions`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(fallback),
-        });
+        }, 2, 2000);
       }
       if (!resp.ok) {
         throw new Error(`${provider} API error ${resp.status}`);
