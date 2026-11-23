@@ -142,10 +142,10 @@ export function ActivityFeed({
       {/* Section Header + Default AI Story vs Simplified Changelog Switcher */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="font-display text-2xl font-bold text-[#0F172A]">
-            What Changed Recently (In Plain English)
+          <h2 className="font-display text-2xl font-bold text-[#0F172A] dark:text-slate-100">
+            What Changed Recently?
           </h2>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
             AI synthesizes recent commits, merged pull requests, and release notes into clear
             community updates—no developer jargon required.
           </p>

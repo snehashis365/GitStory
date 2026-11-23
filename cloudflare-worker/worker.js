@@ -10,13 +10,20 @@
 const DEFAULT_MODEL = 'openai/gpt-oss-120b';
 const ALLOWED_MODELS = new Set([
   'openai/gpt-oss-120b',
-  'llama-3.3-70b-versatile',
-  'llama-3.1-8b-instant',
+  'qwen/qwen3.8-27b',
 ]);
 
 // Rate limiting settings: 6 requests per 60 seconds per IP
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 12;
+
+// Fast SHA-256 helper for Cache API keys
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
 
 // In-memory sliding window rate limiter
 // Note: In Cloudflare Workers, global memory persists across warm requests on the same edge node.
@@ -260,7 +267,35 @@ export default {
       groqPayload.reasoning_format = body.reasoning_format;
     }
 
-    // 7. Call Groq Cloud API with resilient fallback on JSON validation errors
+    // 7. Check Cloudflare Edge Cache for non-streaming completions (0 tokens burned on hit!)
+    const cache = caches.default;
+    let aiCacheKey = null;
+    if (!groqPayload.stream) {
+      const cacheHash = await sha256(
+        JSON.stringify({
+          model: modelToUse,
+          messages: groqPayload.messages,
+          response_format: groqPayload.response_format,
+        })
+      );
+      aiCacheKey = new Request(`https://gitstory-ai-cache.internal/completions/${cacheHash}`, {
+        method: 'GET',
+      });
+
+      const cachedAiResp = await cache.match(aiCacheKey);
+      if (cachedAiResp) {
+        const headers = new Headers(cachedAiResp.headers);
+        for (const [k, v] of Object.entries(corsHeaders)) headers.set(k, v);
+        headers.set('x-ai-cache', 'HIT');
+        return new Response(cachedAiResp.body, {
+          status: cachedAiResp.status,
+          statusText: cachedAiResp.statusText,
+          headers,
+        });
+      }
+    }
+
+    // 8. Call Groq Cloud API with resilient fallback on JSON validation errors
     try {
       let groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -303,6 +338,18 @@ export default {
       for (const [key, value] of Object.entries(corsHeaders)) {
         responseHeaders.set(key, value);
       }
+
+      // Cache successful non-streaming AI completions at Cloudflare Edge for 1 hour
+      if (!groqPayload.stream && aiCacheKey && groqResponse.status === 200) {
+        responseHeaders.set('Cache-Control', 'public, max-age=3600');
+        const cacheable = new Response(groqResponse.clone().body, {
+          status: groqResponse.status,
+          statusText: groqResponse.statusText,
+          headers: responseHeaders,
+        });
+        ctx.waitUntil(cache.put(aiCacheKey, cacheable));
+      }
+      responseHeaders.set('x-ai-cache', 'MISS');
 
       return new Response(groqResponse.body, {
         status: groqResponse.status,

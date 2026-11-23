@@ -4,10 +4,14 @@ import {
   ArrowLeft,
   Bell,
   BellRing,
+  BookOpen,
   ExternalLink,
+  Eye,
+  EyeOff,
   GitCommitHorizontal,
   GitFork,
   GitMerge,
+  Lightbulb,
   MessageCircle,
   PartyPopper,
   Pause,
@@ -18,7 +22,7 @@ import {
   Star,
   AlertCircle,
 } from 'lucide-react';
-import type { AiDigest, AIProviderConfig, MilestoneAlert, RepoSnapshot } from './types';
+import type { AiDigest, AIProviderConfig, MilestoneAlert, ReadmeOverview, RepoSnapshot } from './types';
 import {
   formatCompactNumber,
   formatRelativeTime,
@@ -40,8 +44,13 @@ import {
 import { AIProviderModal, loadAIConfig, clearAIConfig } from './components/AIProviderModal';
 import { calculateAdaptiveSyncInterval, type CadenceInfo } from './utils/cadence';
 import { loadCachedDigest, saveCachedDigest } from './utils/digestCache';
-import { fetchRepoSnapshot } from './services/githubService';
-import { generateStoryDigest } from './services/aiService';
+import { fetchRepoSnapshot, fetchRepoReadme } from './services/githubService';
+import {
+  generateStoryDigest,
+  generateReadmeOverview,
+  loadCachedReadmeOverview,
+  saveCachedReadmeOverview,
+} from './services/aiService';
 
 const DEFAULT_SYNC_INTERVAL_SECONDS = 600; // 10 minutes default
 const RECENT_REPOS_STORAGE_KEY = 'gitstory_recent_repos_v1';
@@ -111,6 +120,13 @@ export default function App() {
     contextLabel: string;
     seq: number;
   } | null>(null);
+
+  const [briefingTab, setBriefingTab] = useState<'pulse' | 'readme'>('pulse');
+  const [readmeOverview, setReadmeOverview] = useState<ReadmeOverview | null>(null);
+  const [isLoadingReadme, setIsLoadingReadme] = useState(false);
+  const [readmeError, setReadmeError] = useState<string | null>(null);
+  const [showRawReadmePeek, setShowRawReadmePeek] = useState(false);
+  const [rawReadmeText, setRawReadmeText] = useState<string>('');
 
   const lastSeenRef = useRef<{
     repo: string;
@@ -272,6 +288,12 @@ export default function App() {
           setSwitcherError(null);
           setRecentRepos(saveRecentRepo(data.repo.fullName));
 
+          setBriefingTab('pulse');
+          setReadmeOverview(null);
+          setRawReadmeText('');
+          setShowRawReadmePeek(false);
+          setReadmeError(null);
+
           const activeCfg = options?.configOverride ?? aiConfig;
           const provider = activeCfg?.provider || 'default';
           const model = activeCfg?.model || '';
@@ -381,6 +403,40 @@ export default function App() {
       seq: (prev?.seq || 0) + 1,
     }));
   };
+
+  const handleSelectBriefingTab = useCallback(
+    async (tab: 'pulse' | 'readme') => {
+      setBriefingTab(tab);
+      if (tab !== 'readme' || !snapshot) return;
+
+      if (readmeOverview) return;
+
+      const cached = loadCachedReadmeOverview(snapshot.repo.fullName);
+      if (cached) {
+        setReadmeOverview(cached);
+        setRawReadmeText(cached.rawReadmeSnippet || '');
+        return;
+      }
+
+      setIsLoadingReadme(true);
+      setReadmeError(null);
+      try {
+        const rawText = await fetchRepoReadme(snapshot.repo.fullName);
+        setRawReadmeText(rawText);
+        const overview = await generateReadmeOverview(snapshot.repo, rawText, aiConfig);
+        overview.rawReadmeSnippet = rawText.slice(0, 3000);
+        setReadmeOverview(overview);
+        saveCachedReadmeOverview(snapshot.repo.fullName, overview);
+      } catch (err: unknown) {
+        setReadmeError(
+          err instanceof Error ? err.message : 'Unable to generate project overview right now.'
+        );
+      } finally {
+        setIsLoadingReadme(false);
+      }
+    },
+    [snapshot, readmeOverview, aiConfig]
+  );
 
   const handleSwitcherSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -678,49 +734,143 @@ export default function App() {
         )}
 
         {/* Hero Community AI Briefing + KPI Strip */}
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-3xl">
+        <section className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8">
+          {/* Header Tab Switcher (Pulse vs Project 101 README Primer) */}
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+            <div className="inline-flex items-center rounded-2xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200/80 dark:border-slate-700/80">
+              <button
+                type="button"
+                onClick={() => setBriefingTab('pulse')}
+                className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                  briefingTab === 'pulse'
+                    ? 'bg-white dark:bg-slate-900 text-[#0F172A] dark:text-slate-100 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-slate-200'
+                }`}
+              >
+                <Sparkles className="h-3.5 w-3.5 text-[#FF5A5F]" />
+                <span>Community Pulse</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSelectBriefingTab('readme')}
+                className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                  briefingTab === 'readme'
+                    ? 'bg-white dark:bg-slate-900 text-[#0F172A] dark:text-slate-100 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-slate-200'
+                }`}
+              >
+                <BookOpen className="h-3.5 w-3.5 text-[#0D9488]" />
+                <span>Project 101 (README)</span>
+                {!readmeOverview && !isLoadingReadme && (
+                  <span className="rounded-full bg-[#0D9488]/15 px-1.5 py-0.2 text-[10px] font-bold text-[#0D9488] dark:text-[#2DD4BF]">
+                    New
+                  </span>
+                )}
+              </button>
+            </div>
+
+            <div className="flex shrink-0 flex-wrap items-center gap-2.5">
+              {briefingTab === 'pulse' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void fetchAiSummary(snapshot, { forceRefresh: true })}
+                    disabled={isLoadingAi}
+                    title="Force-regenerate the AI briefing and story chapters from recent git activity"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-[#FF5A5F]/40 hover:text-[#FF5A5F] hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 transition-all whitespace-nowrap cursor-pointer shadow-xs"
+                  >
+                    <RefreshCw
+                      className={`h-3.5 w-3.5 text-[#FF5A5F] ${isLoadingAi ? 'animate-spin' : ''}`}
+                    />
+                    <span>{isLoadingAi ? 'Synthesizing...' : 'Regenerate Summary'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setChatOpen(true)}
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#0F172A] dark:bg-slate-800 dark:hover:bg-slate-700 dark:border dark:border-slate-700 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 transition-colors whitespace-nowrap cursor-pointer shadow-xs"
+                  >
+                    <MessageCircle className="h-4 w-4 text-[#FF5A5F]" />
+                    <span>Chat About Progress</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowRawReadmePeek((v) => !v)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-white dark:hover:bg-slate-800 transition-colors whitespace-nowrap cursor-pointer shadow-xs"
+                  >
+                    {showRawReadmePeek ? (
+                      <EyeOff className="h-3.5 w-3.5 text-[#0D9488]" />
+                    ) : (
+                      <Eye className="h-3.5 w-3.5 text-[#0D9488]" />
+                    )}
+                    <span>{showRawReadmePeek ? 'Hide Raw README' : 'Peek Raw README'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChatOpen(true);
+                      handleAskAboutItem(
+                        `Can you explain what ${snapshot.repo.name} does in simple terms and why people use it?`,
+                        'Project 101'
+                      );
+                    }}
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#0F172A] dark:bg-slate-800 dark:hover:bg-slate-700 dark:border dark:border-slate-700 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 transition-colors whitespace-nowrap cursor-pointer shadow-xs"
+                  >
+                    <MessageCircle className="h-4 w-4 text-[#FF5A5F]" />
+                    <span>Ask About Project</span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* TAB 1: Live Community Pulse View */}
+          {briefingTab === 'pulse' && (
+            <div className="max-w-4xl">
               <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs font-semibold text-[#0D9488]">
                 <span className="inline-flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5 text-[#FF5A5F]" />
                   AI Community Briefing
                 </span>
-                <span aria-hidden="true" className="text-slate-300">
+                <span aria-hidden="true" className="text-slate-300 dark:text-slate-700">
                   ·
                 </span>
-                <span className="text-slate-600">
+                <span className="text-slate-600 dark:text-slate-400">
                   {digest
                     ? `${digest.momentumEmoji} ${digest.momentumMood}`
                     : `${snapshot.repo.language}`}
                 </span>
-                <span aria-hidden="true" className="text-slate-300">
+                <span aria-hidden="true" className="text-slate-300 dark:text-slate-700">
                   ·
                 </span>
-                <span className="text-slate-500">
+                <span className="text-slate-500 dark:text-slate-400">
                   Last pushed {formatRelativeTime(snapshot.repo.pushedAt)}
                 </span>
               </div>
 
               {isLoadingAi && !digest ? (
                 <div className="mt-4 space-y-3 animate-pulse">
-                  <div className="h-9 w-4/5 rounded-xl bg-slate-100" />
-                  <div className="h-4 w-full rounded-lg bg-slate-100" />
-                  <div className="h-4 w-2/3 rounded-lg bg-slate-100" />
+                  <div className="h-9 w-4/5 rounded-xl bg-slate-100 dark:bg-slate-800" />
+                  <div className="h-4 w-full rounded-lg bg-slate-100 dark:bg-slate-800" />
+                  <div className="h-4 w-2/3 rounded-lg bg-slate-100 dark:bg-slate-800" />
                 </div>
               ) : (
                 <>
-                  <h1 className="mt-3 font-display text-2xl font-extrabold tracking-tight text-[#0F172A] sm:text-3xl lg:text-4xl leading-tight">
+                  <h1 className="mt-3 font-display text-2xl font-extrabold tracking-tight text-[#0F172A] dark:text-slate-100 sm:text-3xl lg:text-4xl leading-tight">
                     {digest?.headline || `Live Community Pulse for ${snapshot.repo.name}`}
                   </h1>
-                  <p className="mt-3 text-base leading-relaxed text-slate-600">
+                  <p className="mt-3 text-base leading-relaxed text-slate-600 dark:text-slate-300">
                     {digest?.playfulSummary || snapshot.repo.description}
                   </p>
                 </>
               )}
 
               {aiError && (
-                <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900">
+                <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 px-3.5 py-2.5 text-xs text-amber-900 dark:text-amber-200">
                   <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
                   <span className="flex-1">{aiError}</span>
                   <div className="flex items-center gap-2">
@@ -744,75 +894,187 @@ export default function App() {
                 </div>
               )}
             </div>
+          )}
 
-            <div className="flex shrink-0 flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => void fetchAiSummary(snapshot, { forceRefresh: true })}
-                disabled={isLoadingAi}
-                title="Force-regenerate the AI briefing and story chapters from recent git activity"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-3.5 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-[#FF5A5F]/40 hover:text-[#FF5A5F] hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 transition-all whitespace-nowrap cursor-pointer shadow-xs"
-              >
-                <RefreshCw
-                  className={`h-3.5 w-3.5 text-[#FF5A5F] ${isLoadingAi ? 'animate-spin' : ''}`}
-                />
-                <span>{isLoadingAi ? 'Synthesizing...' : 'Regenerate Summary'}</span>
-              </button>
+          {/* TAB 2: Project 101 (README De-Jargonizer) View */}
+          {briefingTab === 'readme' && (
+            <div className="space-y-6">
+              {isLoadingReadme && (
+                <div className="space-y-4 py-4 animate-pulse">
+                  <div className="h-6 w-1/3 rounded-lg bg-slate-100 dark:bg-slate-800" />
+                  <div className="h-20 w-full rounded-2xl bg-slate-100 dark:bg-slate-800" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="h-24 rounded-2xl bg-slate-100 dark:bg-slate-800" />
+                    <div className="h-24 rounded-2xl bg-slate-100 dark:bg-slate-800" />
+                  </div>
+                </div>
+              )}
 
-              <button
-                type="button"
-                onClick={() => setChatOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#0F172A] dark:bg-slate-800 dark:hover:bg-slate-700 dark:border dark:border-slate-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition-colors whitespace-nowrap cursor-pointer shadow-xs"
-              >
-                <MessageCircle className="h-4 w-4 text-[#FF5A5F]" />
-                <span>Chat About Progress</span>
-              </button>
+              {readmeError && (
+                <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-4 text-xs text-amber-900 dark:text-amber-200">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+                  <span className="flex-1">{readmeError}</span>
+                  <button
+                    type="button"
+                    onClick={() => void handleSelectBriefingTab('readme')}
+                    className="font-semibold underline underline-offset-2 cursor-pointer"
+                  >
+                    Retry Reading
+                  </button>
+                </div>
+              )}
+
+              {readmeOverview && !isLoadingReadme && (
+                <div className="space-y-5">
+                  {/* Analogy & Headline Banner */}
+                  <div className="rounded-2xl border border-teal-200/80 dark:border-teal-500/20 bg-gradient-to-r from-teal-500/10 via-teal-500/5 to-transparent p-5 sm:p-6">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0D9488] dark:text-[#2DD4BF]">
+                      <Lightbulb className="h-4 w-4 shrink-0" />
+                      <span>The Big Idea (In Plain English)</span>
+                    </div>
+                    <h2 className="mt-2.5 font-display text-xl sm:text-2xl font-extrabold text-[#0F172A] dark:text-slate-100 leading-snug">
+                      {readmeOverview.analogy}
+                    </h2>
+                    <p className="mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                      {readmeOverview.oneLiner}
+                    </p>
+                  </div>
+
+                  {/* Problem Solved vs How It Works Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="rounded-2xl border border-rose-200/70 dark:border-rose-900/40 bg-rose-50/30 dark:bg-rose-950/20 p-4 sm:p-5">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wide">
+                        <span>🛑 The Problem Before This</span>
+                      </div>
+                      <p className="mt-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                        {readmeOverview.problemSolved}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-teal-200/70 dark:border-teal-900/40 bg-teal-50/30 dark:bg-teal-950/20 p-4 sm:p-5">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-teal-700 dark:text-teal-400 uppercase tracking-wide">
+                        <span>✨ How This Project Solves It</span>
+                      </div>
+                      <p className="mt-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                        {readmeOverview.howItWorks}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Core Superpowers Cards */}
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">
+                      Core Superpowers
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {readmeOverview.superpowers.map((sp, idx) => (
+                        <div
+                          key={idx}
+                          className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-[#F8FAFC] dark:bg-slate-900/60 p-4"
+                        >
+                          <div className="text-xl">{sp.emoji}</div>
+                          <h4 className="mt-1.5 text-sm font-bold text-[#0F172A] dark:text-slate-100">
+                            {sp.title}
+                          </h4>
+                          <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                            {sp.description}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Target Audience Badges */}
+                  {readmeOverview.targetAudience.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                        Built for:
+                      </span>
+                      {readmeOverview.targetAudience.map((audience, idx) => (
+                        <span
+                          key={idx}
+                          className="rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                        >
+                          {audience}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Collapsible Peek Raw README Viewer */}
+                  {showRawReadmePeek && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-4 sm:p-5"
+                    >
+                      <div className="flex items-center justify-between mb-2.5">
+                        <span className="text-xs font-bold text-slate-500 font-mono">
+                          Raw GitHub README.md Preview
+                        </span>
+                        <a
+                          href={`${snapshot.repo.htmlUrl}#readme`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-xs font-medium text-[#0D9488] hover:underline"
+                        >
+                          View Full on GitHub <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                      <pre className="max-h-72 overflow-y-auto rounded-xl bg-white dark:bg-slate-900 p-3.5 text-[11px] font-mono text-slate-800 dark:text-slate-200 leading-relaxed border border-slate-200 dark:border-slate-800 whitespace-pre-wrap">
+                        {rawReadmeText || 'No README text available for this repository.'}
+                      </pre>
+                    </motion.div>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
-          <div className="mt-7 grid grid-cols-2 gap-4 border-t border-slate-100 pt-6 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="mt-7 grid grid-cols-2 gap-4 border-t border-slate-100 dark:border-slate-800 pt-6 sm:grid-cols-3 lg:grid-cols-6">
             <div>
-              <p className="text-xs font-medium text-slate-500">Community Stars</p>
-              <p className="mt-1 flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-[#0F172A]">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Community Stars</p>
+              <p className="mt-1 flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-[#0F172A] dark:text-slate-100">
                 <Star className="h-5 w-5 text-[#F59E0B] fill-[#F59E0B]" />
                 {formatCompactNumber(snapshot.repo.stars)}
               </p>
             </div>
 
             <div>
-              <p className="text-xs font-medium text-slate-500">Forks &amp; Remixes</p>
-              <p className="mt-1 flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-[#0F172A]">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Forks &amp; Remixes</p>
+              <p className="mt-1 flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-[#0F172A] dark:text-slate-100">
                 <GitFork className="h-5 w-5 text-[#0D9488]" />
                 {formatCompactNumber(snapshot.repo.forks)}
               </p>
             </div>
 
             <div>
-              <p className="text-xs font-medium text-slate-500">Total Commits</p>
-              <p className="mt-1 flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-[#0F172A]">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Commits</p>
+              <p className="mt-1 flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-[#FF5A5F]">
                 <GitCommitHorizontal className="h-5 w-5 text-[#FF5A5F]" />
                 {formatCompactNumber(snapshot.repo.totalCommits || snapshot.commits.length)}
               </p>
             </div>
 
             <div>
-              <p className="text-xs font-medium text-slate-500">Total Pull Requests</p>
-              <p className="mt-1 flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-[#0F172A]">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Pull Requests</p>
+              <p className="mt-1 flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-[#0F172A] dark:text-slate-100">
                 <GitMerge className="h-5 w-5 text-[#8B5CF6]" />
                 {formatCompactNumber(snapshot.repo.totalPRs || snapshot.mergedPRs.length)}
               </p>
             </div>
 
             <div>
-              <p className="text-xs font-medium text-slate-500">Latest Release</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Latest Release</p>
               <p className="mt-1 font-mono text-2xl font-bold tabular-nums text-[#FF5A5F] truncate">
                 {snapshot.releases[0]?.tagName || 'Rolling'}
               </p>
             </div>
 
             <div>
-              <p className="text-xs font-medium text-slate-500">Active Open Issues</p>
-              <p className="mt-1 font-mono text-2xl font-bold tabular-nums text-[#0F172A]">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Active Open Issues</p>
+              <p className="mt-1 font-mono text-2xl font-bold tabular-nums text-[#0F172A] dark:text-slate-100">
                 {formatCompactNumber(snapshot.repo.openIssues)}
               </p>
             </div>

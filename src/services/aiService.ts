@@ -3,6 +3,7 @@ import type {
   AIProviderType,
   AiDigest,
   ChatMessage,
+  ReadmeOverview,
   RepoSnapshot,
 } from '../types';
 
@@ -810,4 +811,269 @@ ${repoContext}`;
       }
     }
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// README De-Jargonizer: Generates a crystal-clear Project Primer
+// ─────────────────────────────────────────────────────────────────────────────
+
+const README_SYSTEM_PROMPT =
+  'You are GitStory’s executive project explainer. Your job is to transform a repository’s technical README and metadata into an inspiring, jargon-free Project Primer for non-developers, product leaders, stakeholders, and curious fans. Strip out installation commands, npm scripts, compiler flags, Docker commands, CI badges, sponsor lists, and dense technical jargon. Instead, explain the real-world human purpose, what problem it solves, why it is cool, and who uses it. Respond with ONLY a single raw valid JSON object matching the requested schema, without markdown code fences or conversational filler.';
+
+export function loadCachedReadmeOverview(repoFullName: string): ReadmeOverview | null {
+  try {
+    const raw = localStorage.getItem(`gitstory_readme_overview_v1_${repoFullName.toLowerCase()}`);
+    if (!raw) return null;
+    return JSON.parse(raw) as ReadmeOverview;
+  } catch {
+    return null;
+  }
+}
+
+export function saveCachedReadmeOverview(repoFullName: string, overview: ReadmeOverview): void {
+  try {
+    localStorage.setItem(
+      `gitstory_readme_overview_v1_${repoFullName.toLowerCase()}`,
+      JSON.stringify(overview)
+    );
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export async function generateReadmeOverview(
+  repo: { fullName: string; description: string; language: string; name?: string },
+  rawReadme: string,
+  cfg: AIProviderConfig | null
+): Promise<ReadmeOverview> {
+  const provider = cfg?.provider || 'demo';
+  const apiKey = cfg?.apiKey || '';
+  const model = cfg?.model || DEFAULT_AI_MODELS[provider] || 'openai/gpt-oss-120b';
+  const localEndpoint = cfg?.localEndpoint;
+
+  // Clean raw markdown: strip html comments, badge links, and trim to 5,000 chars
+  const cleanedReadme = (rawReadme || '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\[!\[.*?\]\(.*?\)\]\(.*?\)/g, '')
+    .replace(/!\[.*?\]\(.*?\)/g, '')
+    .trim()
+    .slice(0, 5000);
+
+  const promptText = `Repository: ${repo.fullName}
+Description: ${repo.description || 'No description provided.'}
+Primary Language: ${repo.language || 'Software Project'}
+
+README Content:
+${cleanedReadme || 'No formal README found. Analyze repository name, description, and primary language.'}
+
+Output ONLY a valid JSON object matching this schema:
+{
+  "analogy": "A short, vivid analogy starting with 'Think of it as...' comparing this project to an everyday app, object, or service",
+  "oneLiner": "A single punchy sentence describing what this project actually does in plain English",
+  "problemSolved": "What was difficult, frustrating, or impossible before this project existed? (2-3 sentences)",
+  "howItWorks": "How this project solves that problem simply and elegantly without developer jargon (2-3 sentences)",
+  "superpowers": [
+    {
+      "emoji": "✨",
+      "title": "Clear user benefit or capability",
+      "description": "1-2 sentences focusing on real-world impact rather than technical implementation"
+    }
+  ],
+  "targetAudience": ["e.g. Game modders", "Students", "Creative developers"]
+}`;
+
+  let rawJson = '';
+
+  if (provider === 'gemini') {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: `${README_SYSTEM_PROMPT}\n\n${promptText}` }] }],
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.6 },
+      }),
+    });
+    if (!resp.ok) {
+      const e = (await resp.json().catch(() => ({}))) as { error?: { message?: string } };
+      throw new Error(e.error?.message || `Gemini error ${resp.status}`);
+    }
+    const data = (await resp.json()) as {
+      candidates?: { content?: { parts?: { text?: string }[] } }[];
+    };
+    rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  } else if (provider === 'anthropic') {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: model || 'claude-3-5-haiku-latest',
+        max_tokens: 3000,
+        system: README_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: promptText }],
+      }),
+    });
+    if (!resp.ok) {
+      const err = (await resp.json().catch(() => ({}))) as { error?: { message?: string } };
+      throw new Error(err.error?.message || `Anthropic error ${resp.status}`);
+    }
+    const data = (await resp.json()) as { content?: { text: string }[] };
+    rawJson = data.content?.[0]?.text || '';
+  } else if (provider === 'demo') {
+    const proxyUrl = getDemoAiProxyUrl();
+    const demoPayload = {
+      model: model || 'openai/gpt-oss-120b',
+      messages: [
+        { role: 'system', content: README_SYSTEM_PROMPT },
+        { role: 'user', content: promptText },
+      ],
+      response_format: { type: 'json_object' },
+      reasoning_format: 'parsed',
+      max_completion_tokens: 3000,
+    };
+
+    let resp = await fetch(`${proxyUrl}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(demoPayload),
+    });
+
+    if (!resp.ok) {
+      const err = (await resp.json().catch(() => ({}))) as {
+        error?: { message?: string; code?: string };
+      };
+      if (
+        resp.status === 400 &&
+        (err.error?.code === 'json_validate_failed' ||
+          err.error?.message?.includes('validate JSON'))
+      ) {
+        const fallback = { ...demoPayload, reasoning_format: 'hidden' };
+        delete (fallback as Record<string, unknown>).response_format;
+        resp = await fetch(`${proxyUrl}/v1/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fallback),
+        });
+      }
+      if (!resp.ok) {
+        throw new Error(`Demo AI error ${resp.status}`);
+      }
+    }
+    const data = (await resp.json()) as { choices?: { message?: { content?: string } }[] };
+    rawJson = data.choices?.[0]?.message?.content || '';
+  } else {
+    // Groq, OpenAI, NVIDIA, or Local Endpoint
+    const baseUrl =
+      provider === 'groq'
+        ? 'https://api.groq.com/openai/v1'
+        : provider === 'nvidia'
+          ? 'https://integrate.api.nvidia.com/v1'
+          : provider === 'local'
+            ? (localEndpoint?.replace(/\/$/, '') ?? 'http://localhost:11434/v1')
+            : 'https://api.openai.com/v1';
+
+    const reqPayload: Record<string, unknown> = {
+      model,
+      messages: [
+        { role: 'system', content: README_SYSTEM_PROMPT },
+        { role: 'user', content: promptText },
+      ],
+      response_format: { type: 'json_object' },
+      max_completion_tokens: 3000,
+    };
+
+    if (provider === 'groq') {
+      reqPayload.reasoning_format = 'parsed';
+    }
+
+    let resp = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(reqPayload),
+    });
+
+    if (!resp.ok) {
+      const err = (await resp.json().catch(() => ({}))) as {
+        error?: { message?: string; code?: string };
+      };
+      if (
+        resp.status === 400 &&
+        (err.error?.code === 'json_validate_failed' ||
+          err.error?.message?.includes('validate JSON'))
+      ) {
+        const fallback = { ...reqPayload, reasoning_format: 'hidden' };
+        delete (fallback as Record<string, unknown>).response_format;
+        resp = await fetch(`${baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(fallback),
+        });
+      }
+      if (!resp.ok) {
+        throw new Error(`${provider} API error ${resp.status}`);
+      }
+    }
+    const data = (await resp.json()) as { choices?: { message?: { content?: string } }[] };
+    rawJson = data.choices?.[0]?.message?.content || '';
+  }
+
+  // Parse JSON with robust extractor
+  let parsed: Partial<ReadmeOverview> = {};
+  const cleaned = rawJson.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+  try {
+    parsed = JSON.parse(cleaned) as Partial<ReadmeOverview>;
+  } catch {
+    const s = cleaned.indexOf('{');
+    const e = cleaned.lastIndexOf('}');
+    if (s !== -1 && e !== -1 && e > s) {
+      try {
+        parsed = JSON.parse(cleaned.slice(s, e + 1)) as Partial<ReadmeOverview>;
+      } catch {
+        // Fallback below
+      }
+    }
+  }
+
+  return {
+    analogy: String(parsed.analogy || `Think of it as a creative toolkit for ${repo.fullName}.`),
+    oneLiner: String(parsed.oneLiner || repo.description || 'An open-source software project.'),
+    problemSolved: String(
+      parsed.problemSolved ||
+        'Before this project, solving this workflow required complex custom setups and manual effort.'
+    ),
+    howItWorks: String(
+      parsed.howItWorks ||
+        'This repository provides an automated, streamlined solution engineered directly for the community.'
+    ),
+    superpowers: Array.isArray(parsed.superpowers) && parsed.superpowers.length > 0
+      ? parsed.superpowers
+      : [
+          {
+            emoji: '⚡',
+            title: 'High Performance & Speed',
+            description: 'Engineered for smooth execution and rapid feedback cycles.',
+          },
+          {
+            emoji: '🛠️',
+            title: 'Community-Driven Polish',
+            description: 'Actively maintained and refined through open collaboration.',
+          },
+        ],
+    targetAudience: Array.isArray(parsed.targetAudience) && parsed.targetAudience.length > 0
+      ? parsed.targetAudience
+      : ['Developers', 'Project Enthusiasts', 'Open Source Community'],
+    rawReadmeSnippet: rawReadme.slice(0, 3000),
+    generatedAt: new Date().toISOString(),
+  };
 }

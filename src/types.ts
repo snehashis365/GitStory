@@ -130,6 +130,23 @@ export interface LifecycleStageBriefs {
   release: string;
 }
 
+export interface ReadmeSuperpower {
+  emoji: string;
+  title: string;
+  description: string;
+}
+
+export interface ReadmeOverview {
+  analogy: string;
+  oneLiner: string;
+  problemSolved: string;
+  howItWorks: string;
+  superpowers: ReadmeSuperpower[];
+  targetAudience: string[];
+  rawReadmeSnippet?: string;
+  generatedAt: string;
+}
+
 export interface AiDigest {
   headline: string;
   playfulSummary: string;

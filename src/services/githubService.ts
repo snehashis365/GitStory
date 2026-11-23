@@ -596,7 +596,7 @@ export async function fetchRepoSnapshotDirect(
       totalCommits: Math.max(totalCommits, allCommits.length),
       totalPRs: Math.max(totalPRs, mergedPRs.length),
     },
-    commits: allCommits.slice(0, 15),
+    commits: allCommits.slice(0, maxCommits),
     mergedPRs,
     releases,
     contributors,
@@ -608,4 +608,28 @@ export async function fetchRepoSnapshotDirect(
 
   snapshotCache.set(cacheKey, { snapshot, fetchedAt: Date.now() });
   return snapshot;
+}
+
+export async function fetchRepoReadme(repoFullName: string): Promise<string> {
+  const [owner, name] = repoFullName.trim().split('/');
+  if (!owner || !name) return '';
+  const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/readme`;
+  try {
+    const res = await githubFetch<Record<string, unknown>>(url);
+    if (res.data?.content && res.data?.encoding === 'base64') {
+      const b64 = String(res.data.content).replace(/\s/g, '');
+      try {
+        return decodeURIComponent(
+          escape(
+            atob(b64)
+          )
+        );
+      } catch {
+        return atob(b64);
+      }
+    }
+    return '';
+  } catch {
+    return '';
+  }
 }
