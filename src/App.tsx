@@ -19,7 +19,6 @@ import {
   Maximize2,
   Minimize2,
   MessageCircle,
-  PartyPopper,
   Pause,
   Play,
   RefreshCw,
@@ -388,21 +387,6 @@ export default function App() {
     }
   };
 
-  const handleTestMilestoneAlert = () => {
-    if (!snapshot) return;
-    const latestRel = snapshot.releases[0]?.tagName;
-    const latestAuthor = snapshot.commits[0]?.authorLogin || 'community';
-    pushMilestoneAlert({
-      type: 'celebration',
-      emoji: '🎊',
-      title: `Milestone Celebration: ${snapshot.repo.name}`,
-      body: latestRel
-        ? `Tracking live momentum past ${latestRel} — @${latestAuthor} and ${snapshot.contributors.length}+ builders are pushing the lifecycle forward!`
-        : `Live tracker active! @${latestAuthor} and the community are pushing steady updates to ${snapshot.repo.name}.`,
-      isSimulated: true,
-    });
-  };
-
   const handleAskAboutItem = (prompt: string, contextLabel: string) => {
     setChatOpen(true);
     setPendingChatPrompt((prev) => ({
@@ -708,15 +692,6 @@ export default function App() {
                 <span>Push Alerts On</span>
               </span>
             )}
-
-            <button
-              type="button"
-              onClick={handleTestMilestoneAlert}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF5A5F]/12 px-3 py-1.5 text-xs font-semibold text-[#FF5A5F] hover:bg-[#FF5A5F]/20 transition-colors whitespace-nowrap cursor-pointer"
-            >
-              <PartyPopper className="h-3.5 w-3.5" />
-              <span>Test Milestone Alert</span>
-            </button>
           </div>
         </section>
 
