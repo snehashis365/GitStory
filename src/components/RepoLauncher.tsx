@@ -66,11 +66,11 @@ export function RepoLauncher({
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] flex flex-col">
       {/* Clean 3-zone Top Bar Contract */}
-      <header className="w-full border-b border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-8 px-6 py-4">
+      <header className="w-full border-b border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 sm:gap-8 px-4 py-3 sm:px-6 sm:py-4">
           <a
             href="#top"
-            className="font-display text-xl font-extrabold tracking-tight text-[#0F172A] whitespace-nowrap shrink-0"
+            className="font-display text-lg sm:text-xl font-extrabold tracking-tight text-[#0F172A] whitespace-nowrap shrink-0"
           >
             GitStory
           </a>
@@ -117,7 +117,7 @@ export function RepoLauncher({
               type="button"
               onClick={() => onSelectRepo('facebook/react')}
               disabled={isLoading}
-              className="rounded-xl bg-[#FF5A5F] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#E0484D] disabled:opacity-60 whitespace-nowrap shrink-0 cursor-pointer"
+              className="hidden sm:inline-flex rounded-xl bg-[#FF5A5F] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#E0484D] disabled:opacity-60 whitespace-nowrap shrink-0 cursor-pointer"
             >
               Explore Demo Repo
             </button>
@@ -125,7 +125,7 @@ export function RepoLauncher({
         </div>
       </header>
 
-      <main id="top" className="mx-auto w-full max-w-6xl flex-1 px-6 pt-14 pb-20 md:pt-20">
+      <main id="top" className="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-16 sm:px-6 sm:pt-14 md:pt-20">
         {/* Sunlit Hero & Search Form */}
         <motion.section
           initial={{ opacity: 0, y: 14 }}
@@ -136,7 +136,7 @@ export function RepoLauncher({
           <p className="text-sm font-semibold text-[#0D9488]">
             Open-source progress made joyful &amp; jargon-free
           </p>
-          <h1 className="mt-3 font-display text-4xl font-extrabold tracking-tight text-[#0F172A] sm:text-5xl md:text-[54px] leading-[1.08]">
+          <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-[#0F172A] sm:text-5xl md:text-[54px] leading-[1.12] sm:leading-[1.08]">
             Turn any GitHub repo into a live plain-English story
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-slate-600 sm:text-lg">
@@ -221,7 +221,7 @@ export function RepoLauncher({
             </span>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {CURATED_REPOS.map((item, idx) => (
               <motion.button
                 key={item.fullName}
@@ -231,7 +231,7 @@ export function RepoLauncher({
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05, duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-                className="group flex flex-col justify-between rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#0D9488]/50 hover:shadow-md hover:shadow-slate-900/5 disabled:opacity-60 cursor-pointer"
+                className="group flex flex-col justify-between rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#0D9488]/50 hover:shadow-md hover:shadow-slate-900/5 disabled:opacity-60 cursor-pointer"
               >
                 <div>
                   <div className="flex items-center justify-between">
@@ -261,7 +261,7 @@ export function RepoLauncher({
         {/* Three Clear Value Highlights */}
         <section
           id="how-it-works"
-          className="mt-16 grid grid-cols-1 gap-8 border-t border-slate-200/80 pt-12 md:grid-cols-3"
+          className="mt-12 sm:mt-16 grid grid-cols-1 gap-6 sm:gap-8 border-t border-slate-200/80 pt-8 sm:pt-12 md:grid-cols-3"
         >
           <div className="space-y-2.5">
             <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF5A5F]/10 text-[#FF5A5F]">

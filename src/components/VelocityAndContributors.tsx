@@ -34,7 +34,7 @@ export function VelocityAndContributors({ snapshot, digest }: VelocityAndContrib
   return (
     <section id="community" className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-stretch">
       {/* Left: Animated Velocity Charts + Milestone Progress Bars */}
-      <div className="flex flex-col justify-between rounded-3xl border border-slate-200 bg-white p-6 lg:col-span-7">
+      <div className="flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 lg:col-span-7">
         <div>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -176,7 +176,7 @@ export function VelocityAndContributors({ snapshot, digest }: VelocityAndContrib
       </div>
 
       {/* Right: Top Contributors Leaderboard + Mini Contribution Bar Chart */}
-      <div className="flex flex-col justify-between rounded-3xl border border-slate-200 bg-white p-6 lg:col-span-5">
+      <div className="flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 lg:col-span-5">
         <div>
           <div className="flex items-center justify-between gap-2">
             <div>

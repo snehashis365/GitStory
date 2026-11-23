@@ -161,7 +161,7 @@ export function ProjectLifecyclePipeline({
   return (
     <section className="space-y-4">
       {/* Visual Pipeline Container */}
-      <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-xs sm:p-8">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 lg:p-8 shadow-xs">
         {/* Subtle decorative background grid pattern */}
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.02]"
@@ -217,7 +217,7 @@ export function ProjectLifecyclePipeline({
                 onClick={() => setSelectedStageId(stage.id)}
                 whileHover={{ y: -3 }}
                 transition={{ duration: 0.18 }}
-                className={`relative flex flex-col justify-between rounded-2xl border p-5 text-left transition-all cursor-pointer ${
+                className={`relative flex flex-col justify-between rounded-2xl border p-4 sm:p-5 text-left transition-all cursor-pointer ${
                   isSelected
                     ? `border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 ring-4 ${stage.accent.ring} shadow-lg shadow-slate-900/5`
                     : 'border-slate-200/90 dark:border-slate-800 bg-[#F8FAFC] dark:bg-slate-950/60 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-white dark:hover:bg-slate-900'
@@ -331,7 +331,7 @@ export function ProjectLifecyclePipeline({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
-            className="mt-6 rounded-2xl border border-slate-200/90 bg-[#F8FAFC] p-5 sm:p-6"
+            className="mt-6 rounded-2xl border border-slate-200/90 bg-[#F8FAFC] p-4 sm:p-6"
           >
             <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               {/* Left Stage Overview */}

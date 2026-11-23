@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { motion } from 'motion/react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   ArrowLeft,
   Bell,
   BellRing,
   BookOpen,
+  ChevronDown,
+  ChevronUp,
   ExternalLink,
   Eye,
   EyeOff,
@@ -12,6 +16,8 @@ import {
   GitFork,
   GitMerge,
   Lightbulb,
+  Maximize2,
+  Minimize2,
   MessageCircle,
   PartyPopper,
   Pause,
@@ -125,7 +131,8 @@ export default function App() {
   const [readmeOverview, setReadmeOverview] = useState<ReadmeOverview | null>(null);
   const [isLoadingReadme, setIsLoadingReadme] = useState(false);
   const [readmeError, setReadmeError] = useState<string | null>(null);
-  const [showRawReadmePeek, setShowRawReadmePeek] = useState(false);
+  const [showReadmePeek, setShowReadmePeek] = useState(false);
+  const [isReadmeExpanded, setIsReadmeExpanded] = useState(false);
   const [rawReadmeText, setRawReadmeText] = useState<string>('');
 
   const lastSeenRef = useRef<{
@@ -291,7 +298,8 @@ export default function App() {
           setBriefingTab('pulse');
           setReadmeOverview(null);
           setRawReadmeText('');
-          setShowRawReadmePeek(false);
+          setShowReadmePeek(false);
+          setIsReadmeExpanded(false);
           setReadmeError(null);
 
           const activeCfg = options?.configOverride ?? aiConfig;
@@ -414,7 +422,11 @@ export default function App() {
       const cached = loadCachedReadmeOverview(snapshot.repo.fullName);
       if (cached) {
         setReadmeOverview(cached);
-        setRawReadmeText(cached.rawReadmeSnippet || '');
+        if (cached.rawReadmeSnippet) {
+          setRawReadmeText(cached.rawReadmeSnippet);
+        } else {
+          void fetchRepoReadme(snapshot.repo.fullName).then((text) => setRawReadmeText(text)).catch(() => {});
+        }
         return;
       }
 
@@ -424,7 +436,7 @@ export default function App() {
         const rawText = await fetchRepoReadme(snapshot.repo.fullName);
         setRawReadmeText(rawText);
         const overview = await generateReadmeOverview(snapshot.repo, rawText, aiConfig);
-        overview.rawReadmeSnippet = rawText.slice(0, 3000);
+        overview.rawReadmeSnippet = rawText.slice(0, 40000);
         setReadmeOverview(overview);
         saveCachedReadmeOverview(snapshot.repo.fullName, overview);
       } catch (err: unknown) {
@@ -480,8 +492,8 @@ export default function App() {
       />
 
       {/* Strict 3-Zone Top Bar Contract */}
-      <header className="sticky top-0 z-30 border-b border-slate-200/85 bg-white/95">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-8 px-4 py-3.5 sm:px-6">
+      <header className="sticky top-0 z-30 border-b border-slate-200/85 bg-white/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3.5 py-2.5 sm:gap-8 sm:px-6 sm:py-3.5">
           <button
             type="button"
             onClick={() => {
@@ -489,7 +501,7 @@ export default function App() {
               setDigest(null);
               setRepoError(null);
             }}
-            className="font-display text-xl font-extrabold tracking-tight text-[#0F172A] hover:text-[#FF5A5F] transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            className="font-display text-lg sm:text-xl font-extrabold tracking-tight text-[#0F172A] hover:text-[#FF5A5F] transition-colors whitespace-nowrap shrink-0 cursor-pointer"
           >
             GitStory
           </button>
@@ -521,7 +533,7 @@ export default function App() {
             </a>
           </nav>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* 3-Step Theme Toggle: Light > Auto > Dark */}
             <ThemeToggle />
 
@@ -531,41 +543,51 @@ export default function App() {
                 type="button"
                 onClick={() => setShowProviderModal(true)}
                 title={`AI: ${aiConfig.provider} · ${aiConfig.model || 'default model'}`}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:border-[#FF5A5F]/40 hover:text-[#FF5A5F] transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 sm:gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-2 py-1.5 sm:px-3 sm:py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:border-[#FF5A5F]/40 hover:text-[#FF5A5F] transition-colors cursor-pointer"
               >
                 <Sparkles className="h-3.5 w-3.5 text-[#FF5A5F]" />
-                <span className="capitalize">{aiConfig.provider === 'demo' ? 'Demo AI (Groq)' : aiConfig.provider}</span>
+                <span className="capitalize">
+                  {aiConfig.provider === 'demo' ? (
+                    <>
+                      <span className="hidden xs:inline">Demo AI</span>
+                      <span className="xs:hidden">Demo</span>
+                    </>
+                  ) : (
+                    aiConfig.provider
+                  )}
+                </span>
               </button>
             )}
             {!aiConfig && (
               <button
                 type="button"
                 onClick={() => setShowProviderModal(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/15 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-500/25 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 sm:gap-1.5 rounded-xl border border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/15 px-2 py-1.5 sm:px-3 sm:py-2 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-500/25 transition-colors cursor-pointer"
               >
                 <Sparkles className="h-3.5 w-3.5 text-amber-600" />
-                <span>Set AI Key</span>
+                <span>Set Key</span>
               </button>
             )}
             <button
               type="button"
               onClick={() => setChatOpen(true)}
-              className="inline-flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#FF5A5F] px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-white hover:bg-[#E0484D] transition-colors whitespace-nowrap cursor-pointer"
+              className="inline-flex items-center gap-1 sm:gap-1.5 rounded-xl bg-[#FF5A5F] px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-white hover:bg-[#E0484D] transition-colors whitespace-nowrap cursor-pointer"
             >
               <MessageCircle className="h-4 w-4" />
-              <span>Ask AI Guide</span>
+              <span className="hidden sm:inline">Ask AI Guide</span>
+              <span className="sm:hidden">Ask AI</span>
             </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl space-y-8 px-4 pt-6 pb-20 sm:px-6">
+      <main className="mx-auto max-w-7xl space-y-6 sm:space-y-8 px-3.5 pt-4 pb-20 sm:px-6 sm:pt-6">
         {/* Contextual Repo Controls & Live 60s Sync Bar */}
         <section
           id="overview"
-          className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 sm:px-5 lg:flex-row lg:items-center lg:justify-between"
+          className="flex flex-col gap-3.5 rounded-2xl border border-slate-200 bg-white p-3.5 sm:p-5 lg:flex-row lg:items-center lg:justify-between"
         >
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
             <button
               type="button"
               onClick={() => {
@@ -582,23 +604,23 @@ export default function App() {
               /
             </span>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2 min-w-0">
               {snapshot.repo.avatarUrl && (
                 <img
                   src={snapshot.repo.avatarUrl}
                   alt={`${snapshot.repo.owner} avatar`}
                   referrerPolicy="no-referrer"
-                  className="h-6 w-6 rounded-full border border-slate-200 object-cover"
+                  className="h-5 w-5 sm:h-6 sm:w-6 rounded-full border border-slate-200 object-cover shrink-0"
                 />
               )}
               <a
                 href={snapshot.repo.htmlUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1 font-display text-sm font-bold text-[#0F172A] hover:text-[#FF5A5F] transition-colors"
+                className="inline-flex items-center gap-1 font-display text-sm font-bold text-[#0F172A] hover:text-[#FF5A5F] transition-colors truncate max-w-[140px] xs:max-w-[200px] sm:max-w-xs md:max-w-none"
               >
-                <span>{snapshot.repo.fullName}</span>
-                <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+                <span className="truncate">{snapshot.repo.fullName}</span>
+                <ExternalLink className="h-3.5 w-3.5 text-slate-400 shrink-0" />
               </a>
             </div>
 
@@ -734,14 +756,14 @@ export default function App() {
         )}
 
         {/* Hero Community AI Briefing + KPI Strip */}
-        <section className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8">
+        <section className="rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-6 lg:p-8">
           {/* Header Tab Switcher (Pulse vs Project 101 README Primer) */}
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
-            <div className="inline-flex items-center rounded-2xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200/80 dark:border-slate-700/80">
+          <div className="mb-6 flex flex-col gap-3.5 border-b border-slate-100 dark:border-slate-800 pb-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="inline-flex w-full sm:w-auto items-center rounded-2xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200/80 dark:border-slate-700/80">
               <button
                 type="button"
                 onClick={() => setBriefingTab('pulse')}
-                className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs font-semibold transition-all cursor-pointer ${
                   briefingTab === 'pulse'
                     ? 'bg-white dark:bg-slate-900 text-[#0F172A] dark:text-slate-100 shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-slate-200'
@@ -753,23 +775,23 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => void handleSelectBriefingTab('readme')}
-                className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs font-semibold transition-all cursor-pointer ${
                   briefingTab === 'readme'
                     ? 'bg-white dark:bg-slate-900 text-[#0F172A] dark:text-slate-100 shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-slate-200'
                 }`}
               >
                 <BookOpen className="h-3.5 w-3.5 text-[#0D9488]" />
-                <span>Project 101 (README)</span>
+                <span>Project 101</span>
                 {!readmeOverview && !isLoadingReadme && (
                   <span className="rounded-full bg-[#0D9488]/15 px-1.5 py-0.2 text-[10px] font-bold text-[#0D9488] dark:text-[#2DD4BF]">
-                    New
+                    README
                   </span>
                 )}
               </button>
             </div>
 
-            <div className="flex shrink-0 flex-wrap items-center gap-2.5">
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
               {briefingTab === 'pulse' ? (
                 <>
                   <button
@@ -777,18 +799,18 @@ export default function App() {
                     onClick={() => void fetchAiSummary(snapshot, { forceRefresh: true })}
                     disabled={isLoadingAi}
                     title="Force-regenerate the AI briefing and story chapters from recent git activity"
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-[#FF5A5F]/40 hover:text-[#FF5A5F] hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 transition-all whitespace-nowrap cursor-pointer shadow-xs"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-[#FF5A5F]/40 hover:text-[#FF5A5F] hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 transition-all whitespace-nowrap cursor-pointer shadow-xs"
                   >
                     <RefreshCw
                       className={`h-3.5 w-3.5 text-[#FF5A5F] ${isLoadingAi ? 'animate-spin' : ''}`}
                     />
-                    <span>{isLoadingAi ? 'Synthesizing...' : 'Regenerate Summary'}</span>
+                    <span>{isLoadingAi ? 'Synthesizing...' : 'Regenerate'}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setChatOpen(true)}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#0F172A] dark:bg-slate-800 dark:hover:bg-slate-700 dark:border dark:border-slate-700 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 transition-colors whitespace-nowrap cursor-pointer shadow-xs"
+                    className="inline-flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#0F172A] dark:bg-slate-800 dark:hover:bg-slate-700 dark:border dark:border-slate-700 px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white hover:bg-slate-800 transition-colors whitespace-nowrap cursor-pointer shadow-xs"
                   >
                     <MessageCircle className="h-4 w-4 text-[#FF5A5F]" />
                     <span>Chat About Progress</span>
@@ -798,15 +820,15 @@ export default function App() {
                 <>
                   <button
                     type="button"
-                    onClick={() => setShowRawReadmePeek((v) => !v)}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-white dark:hover:bg-slate-800 transition-colors whitespace-nowrap cursor-pointer shadow-xs"
+                    onClick={() => setShowReadmePeek((v) => !v)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-white dark:hover:bg-slate-800 transition-colors whitespace-nowrap cursor-pointer shadow-xs"
                   >
-                    {showRawReadmePeek ? (
+                    {showReadmePeek ? (
                       <EyeOff className="h-3.5 w-3.5 text-[#0D9488]" />
                     ) : (
                       <Eye className="h-3.5 w-3.5 text-[#0D9488]" />
                     )}
-                    <span>{showRawReadmePeek ? 'Hide Raw README' : 'Peek Raw README'}</span>
+                    <span>{showReadmePeek ? 'Hide README' : 'Peek README'}</span>
                   </button>
 
                   <button
@@ -818,7 +840,7 @@ export default function App() {
                         'Project 101'
                       );
                     }}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#0F172A] dark:bg-slate-800 dark:hover:bg-slate-700 dark:border dark:border-slate-700 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 transition-colors whitespace-nowrap cursor-pointer shadow-xs"
+                    className="inline-flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#0F172A] dark:bg-slate-800 dark:hover:bg-slate-700 dark:border dark:border-slate-700 px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white hover:bg-slate-800 transition-colors whitespace-nowrap cursor-pointer shadow-xs"
                   >
                     <MessageCircle className="h-4 w-4 text-[#FF5A5F]" />
                     <span>Ask About Project</span>
@@ -1001,30 +1023,196 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Collapsible Peek Raw README Viewer */}
-                  {showRawReadmePeek && (
+                  {/* Collapsible Peek Rendered Markdown README Viewer */}
+                  {showReadmePeek && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-4 sm:p-5"
+                      className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4 sm:p-5 shadow-xs"
                     >
-                      <div className="flex items-center justify-between mb-2.5">
-                        <span className="text-xs font-bold text-slate-500 font-mono">
-                          Raw GitHub README.md Preview
-                        </span>
-                        <a
-                          href={`${snapshot.repo.htmlUrl}#readme`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-xs font-medium text-[#0D9488] hover:underline"
-                        >
-                          View Full on GitHub <ExternalLink className="h-3 w-3" />
-                        </a>
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="h-4 w-4 text-[#0D9488]" />
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide">
+                            Rendered README.md
+                          </span>
+                          <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-mono text-slate-500">
+                            Markdown
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() => setIsReadmeExpanded((v) => !v)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                          >
+                            {isReadmeExpanded ? (
+                              <>
+                                <Minimize2 className="h-3 w-3 text-slate-500" />
+                                <span>Collapse</span>
+                              </>
+                            ) : (
+                              <>
+                                <Maximize2 className="h-3 w-3 text-[#0D9488]" />
+                                <span>Expand Full</span>
+                              </>
+                            )}
+                          </button>
+
+                          <a
+                            href={`${snapshot.repo.htmlUrl}#readme`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-xs font-medium text-[#0D9488] hover:underline"
+                          >
+                            <span>GitHub</span>
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
                       </div>
-                      <pre className="max-h-72 overflow-y-auto rounded-xl bg-white dark:bg-slate-900 p-3.5 text-[11px] font-mono text-slate-800 dark:text-slate-200 leading-relaxed border border-slate-200 dark:border-slate-800 whitespace-pre-wrap">
-                        {rawReadmeText || 'No README text available for this repository.'}
-                      </pre>
+
+                      {/* Rendered Markdown Body with smooth expandable constraint */}
+                      <div
+                        className={`relative transition-all duration-300 ease-in-out ${
+                          isReadmeExpanded
+                            ? 'max-h-[85vh] overflow-y-auto'
+                            : 'max-h-72 sm:max-h-80 overflow-hidden'
+                        }`}
+                      >
+                        <div className="readme-markdown text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed space-y-3 break-words">
+                          {rawReadmeText ? (
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                h1: ({ ...props }) => (
+                                  <h1
+                                    className="font-display text-lg sm:text-xl font-extrabold text-[#0F172A] dark:text-white mt-4 mb-2 pb-1.5 border-b border-slate-200 dark:border-slate-800"
+                                    {...props}
+                                  />
+                                ),
+                                h2: ({ ...props }) => (
+                                  <h2
+                                    className="font-display text-base sm:text-lg font-bold text-[#0F172A] dark:text-white mt-3.5 mb-1.5 pb-1 border-b border-slate-100 dark:border-slate-800"
+                                    {...props}
+                                  />
+                                ),
+                                h3: ({ ...props }) => (
+                                  <h3
+                                    className="font-display text-sm sm:text-base font-bold text-[#0F172A] dark:text-white mt-3 mb-1"
+                                    {...props}
+                                  />
+                                ),
+                                p: ({ ...props }) => (
+                                  <p className="text-slate-700 dark:text-slate-300 leading-relaxed my-2" {...props} />
+                                ),
+                                ul: ({ ...props }) => (
+                                  <ul className="list-disc pl-5 my-2 space-y-1 text-slate-700 dark:text-slate-300 marker:text-[#0D9488]" {...props} />
+                                ),
+                                ol: ({ ...props }) => (
+                                  <ol className="list-decimal pl-5 my-2 space-y-1 text-slate-700 dark:text-slate-300 marker:text-slate-400" {...props} />
+                                ),
+                                li: ({ ...props }) => <li className="leading-snug" {...props} />,
+                                code: ({ inline, className, children, ...props }: any) => {
+                                  return inline ? (
+                                    <code
+                                      className="rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 font-mono text-[11px] sm:text-xs text-[#0D9488] dark:text-[#2DD4BF] border border-slate-200 dark:border-slate-700 break-all"
+                                      {...props}
+                                    >
+                                      {children}
+                                    </code>
+                                  ) : (
+                                    <pre className="overflow-x-auto rounded-xl bg-slate-900 p-3 text-[11px] sm:text-xs font-mono text-slate-100 dark:bg-slate-950 my-2.5 border border-slate-800">
+                                      <code {...props}>{children}</code>
+                                    </pre>
+                                  );
+                                },
+                                pre: ({ children }) => <>{children}</>,
+                                a: ({ href, children, ...props }) => (
+                                  <a
+                                    href={href}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-[#0D9488] dark:text-[#2DD4BF] underline underline-offset-2 hover:text-[#0F172A] dark:hover:text-white break-all"
+                                    {...props}
+                                  >
+                                    {children}
+                                  </a>
+                                ),
+                                blockquote: ({ ...props }) => (
+                                  <blockquote
+                                    className="border-l-4 border-[#0D9488] pl-3 italic text-slate-600 dark:text-slate-400 my-2 bg-slate-50/70 dark:bg-slate-900/50 py-1 rounded-r"
+                                    {...props}
+                                  />
+                                ),
+                                table: ({ ...props }) => (
+                                  <div className="overflow-x-auto my-3">
+                                    <table
+                                      className="min-w-full divide-y divide-slate-200 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 text-xs text-left"
+                                      {...props}
+                                    />
+                                  </div>
+                                ),
+                                th: ({ ...props }) => (
+                                  <th
+                                    className="bg-slate-100 dark:bg-slate-800 px-3 py-2 font-bold text-slate-900 dark:text-white"
+                                    {...props}
+                                  />
+                                ),
+                                td: ({ ...props }) => (
+                                  <td
+                                    className="px-3 py-2 border-t border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300"
+                                    {...props}
+                                  />
+                                ),
+                                img: ({ src, alt, ...props }) => (
+                                  <img
+                                    src={src}
+                                    alt={alt || 'README illustration'}
+                                    className="max-w-full h-auto rounded-lg my-2 border border-slate-200 dark:border-slate-800"
+                                    {...props}
+                                  />
+                                ),
+                              }}
+                            >
+                              {rawReadmeText}
+                            </ReactMarkdown>
+                          ) : (
+                            <p className="text-slate-500 italic py-4">
+                              No README content found for this repository.
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Bottom Gradient Fade overlay when collapsed */}
+                        {!isReadmeExpanded && rawReadmeText && (
+                          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-24 items-end justify-center bg-gradient-to-t from-white via-white/85 to-transparent dark:from-slate-950 dark:via-slate-950/85">
+                            <button
+                              type="button"
+                              onClick={() => setIsReadmeExpanded(true)}
+                              className="pointer-events-auto mb-2 inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 px-4 py-1.5 text-xs font-bold text-[#0D9488] dark:text-[#2DD4BF] shadow-md hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
+                            >
+                              <ChevronDown className="h-3.5 w-3.5" />
+                              <span>Expand Full README</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Bottom Collapse Button when expanded */}
+                      {isReadmeExpanded && (
+                        <div className="mt-3 flex justify-center border-t border-slate-100 dark:border-slate-800 pt-3">
+                          <button
+                            type="button"
+                            onClick={() => setIsReadmeExpanded(false)}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                          >
+                            <ChevronUp className="h-3.5 w-3.5" />
+                            <span>Collapse README Preview</span>
+                          </button>
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </div>
@@ -1032,49 +1220,49 @@ export default function App() {
             </div>
           )}
 
-          <div className="mt-7 grid grid-cols-2 gap-4 border-t border-slate-100 dark:border-slate-800 pt-6 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="mt-6 sm:mt-7 grid grid-cols-2 gap-3 sm:gap-4 border-t border-slate-100 dark:border-slate-800 pt-5 sm:pt-6 sm:grid-cols-3 lg:grid-cols-6">
             <div>
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Community Stars</p>
-              <p className="mt-1 flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-[#0F172A] dark:text-slate-100">
-                <Star className="h-5 w-5 text-[#F59E0B] fill-[#F59E0B]" />
+              <p className="mt-1 flex items-center gap-1.5 font-mono text-xl sm:text-2xl font-bold tabular-nums text-[#0F172A] dark:text-slate-100">
+                <Star className="h-4 w-4 sm:h-5 sm:w-5 text-[#F59E0B] fill-[#F59E0B] shrink-0" />
                 {formatCompactNumber(snapshot.repo.stars)}
               </p>
             </div>
 
             <div>
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Forks &amp; Remixes</p>
-              <p className="mt-1 flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-[#0F172A] dark:text-slate-100">
-                <GitFork className="h-5 w-5 text-[#0D9488]" />
+              <p className="mt-1 flex items-center gap-1.5 font-mono text-xl sm:text-2xl font-bold tabular-nums text-[#0F172A] dark:text-slate-100">
+                <GitFork className="h-4 w-4 sm:h-5 sm:w-5 text-[#0D9488] shrink-0" />
                 {formatCompactNumber(snapshot.repo.forks)}
               </p>
             </div>
 
             <div>
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Commits</p>
-              <p className="mt-1 flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-[#FF5A5F]">
-                <GitCommitHorizontal className="h-5 w-5 text-[#FF5A5F]" />
+              <p className="mt-1 flex items-center gap-1.5 font-mono text-xl sm:text-2xl font-bold tabular-nums text-[#FF5A5F]">
+                <GitCommitHorizontal className="h-4 w-4 sm:h-5 sm:w-5 text-[#FF5A5F] shrink-0" />
                 {formatCompactNumber(snapshot.repo.totalCommits || snapshot.commits.length)}
               </p>
             </div>
 
             <div>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Pull Requests</p>
-              <p className="mt-1 flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-[#0F172A] dark:text-slate-100">
-                <GitMerge className="h-5 w-5 text-[#8B5CF6]" />
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total PRs</p>
+              <p className="mt-1 flex items-center gap-1.5 font-mono text-xl sm:text-2xl font-bold tabular-nums text-[#0F172A] dark:text-slate-100">
+                <GitMerge className="h-4 w-4 sm:h-5 sm:w-5 text-[#8B5CF6] shrink-0" />
                 {formatCompactNumber(snapshot.repo.totalPRs || snapshot.mergedPRs.length)}
               </p>
             </div>
 
             <div>
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Latest Release</p>
-              <p className="mt-1 font-mono text-2xl font-bold tabular-nums text-[#FF5A5F] truncate">
+              <p className="mt-1 font-mono text-xl sm:text-2xl font-bold tabular-nums text-[#FF5A5F] truncate">
                 {snapshot.releases[0]?.tagName || 'Rolling'}
               </p>
             </div>
 
             <div>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Active Open Issues</p>
-              <p className="mt-1 font-mono text-2xl font-bold tabular-nums text-[#0F172A] dark:text-slate-100">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Active Issues</p>
+              <p className="mt-1 font-mono text-xl sm:text-2xl font-bold tabular-nums text-[#0F172A] dark:text-slate-100">
                 {formatCompactNumber(snapshot.repo.openIssues)}
               </p>
             </div>

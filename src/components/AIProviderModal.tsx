@@ -569,7 +569,7 @@ export function AIProviderModal({ isOpen, onConfirm, onClose }: AIProviderModalP
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-7 shadow-2xl shadow-slate-900/15 max-h-[92vh] overflow-y-auto"
+            className="w-full max-w-md rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-7 shadow-2xl shadow-slate-900/15 max-h-[92vh] overflow-y-auto"
           >
             {/* Header */}
             <div className="mb-6 flex items-start justify-between gap-3">
