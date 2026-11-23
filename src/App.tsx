@@ -182,7 +182,7 @@ export default function App() {
       setIsLoadingAi(true);
       setAiError(null);
       try {
-        if (!activeConfig || (!activeConfig.apiKey && activeConfig.provider !== 'local')) {
+        if (!activeConfig || (!activeConfig.apiKey && activeConfig.provider !== 'local' && activeConfig.provider !== 'demo')) {
           throw new Error('Please configure your AI Provider API key in settings.');
         }
         const data = await generateStoryDigest(repoSnap, activeConfig);
