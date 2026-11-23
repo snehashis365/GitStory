@@ -54,7 +54,8 @@ function getCorsHeaders(request) {
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-requested-with',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-requested-with, if-none-match',
+    'Access-Control-Expose-Headers': 'Link, x-ratelimit-remaining, x-ratelimit-limit, x-proxy-cache',
     'Access-Control-Max-Age': '86400',
   };
 }
@@ -78,9 +79,14 @@ export default {
       return new Response(
         JSON.stringify({
           status: 'ok',
-          service: 'GitStory AI Proxy',
+          service: 'GitStory AI & GitHub Proxy',
           defaultModel: DEFAULT_MODEL,
           rateLimit: `${MAX_REQUESTS_PER_WINDOW} req / ${RATE_LIMIT_WINDOW_MS / 1000}s per IP`,
+          features: {
+            aiGateway: true,
+            githubProxy: true,
+            githubTokenConfigured: Boolean(env.GITHUB_TOKEN),
+          },
         }),
         {
           status: 200,
@@ -90,6 +96,93 @@ export default {
           },
         }
       );
+    }
+
+    // --------------------------------------------------------------------------
+    // 3. GitHub API Proxy with Edge Caching & GITHUB_TOKEN Injection
+    // --------------------------------------------------------------------------
+    if (url.pathname.startsWith('/github/')) {
+      // Security: Only allow safe GET requests
+      if (request.method !== 'GET') {
+        return new Response(
+          JSON.stringify({ error: 'Method Not Allowed. Only GET requests are permitted.' }),
+          { status: 405, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        );
+      }
+
+      // Extract subpath (e.g. /github/repos/facebook/react/commits -> /repos/facebook/react/commits)
+      const subPath = url.pathname.replace(/^\/github/, '');
+      
+      // Security: Only allow /repos/* or /search/* endpoints
+      if (!subPath.startsWith('/repos/') && !subPath.startsWith('/search/')) {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden endpoint. Only /repos/* and /search/* can be queried.' }),
+          { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        );
+      }
+
+      const targetUrl = new URL(`https://api.github.com${subPath}${url.search}`);
+
+      // Check Cloudflare Edge Cache first
+      const cache = caches.default;
+      const cacheKey = new Request(targetUrl.toString(), {
+        headers: { Accept: 'application/vnd.github.v3+json' },
+      });
+
+      let cachedResponse = await cache.match(cacheKey);
+      if (cachedResponse) {
+        const headers = new Headers(cachedResponse.headers);
+        for (const [k, v] of Object.entries(corsHeaders)) headers.set(k, v);
+        headers.set('x-proxy-cache', 'HIT');
+        return new Response(cachedResponse.body, {
+          status: cachedResponse.status,
+          statusText: cachedResponse.statusText,
+          headers,
+        });
+      }
+
+      // Build GitHub API request headers
+      const ghHeaders = {
+        'User-Agent': 'GitStory-Gateway/1.0',
+        Accept: 'application/vnd.github.v3+json',
+      };
+      if (env.GITHUB_TOKEN) {
+        ghHeaders['Authorization'] = `Bearer ${env.GITHUB_TOKEN.trim()}`;
+      }
+
+      try {
+        const ghResp = await fetch(targetUrl.toString(), {
+          headers: ghHeaders,
+        });
+
+        const respHeaders = new Headers(ghResp.headers);
+        for (const [k, v] of Object.entries(corsHeaders)) {
+          respHeaders.set(k, v);
+        }
+        respHeaders.set('x-proxy-cache', 'MISS');
+
+        // Cache 200 responses at Cloudflare Edge for 60 seconds
+        if (ghResp.status === 200) {
+          respHeaders.set('Cache-Control', 'public, max-age=60');
+          const cacheableResponse = new Response(ghResp.clone().body, {
+            status: ghResp.status,
+            statusText: ghResp.statusText,
+            headers: respHeaders,
+          });
+          ctx.waitUntil(cache.put(cacheKey, cacheableResponse));
+        }
+
+        return new Response(ghResp.body, {
+          status: ghResp.status,
+          statusText: ghResp.statusText,
+          headers: respHeaders,
+        });
+      } catch (err) {
+        return new Response(
+          JSON.stringify({ error: `GitHub upstream error: ${err.message || 'fetch failed'}` }),
+          { status: 502, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        );
+      }
     }
 
     // 3. Only accept POST to /v1/chat/completions (matches OpenAI client path)

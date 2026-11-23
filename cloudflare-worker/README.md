@@ -15,11 +15,14 @@ It allows visitors on your GitHub Pages deployment to experience live GitStory A
    - Delete the starter code.
    - Copy and paste the entire contents of [`worker.js`](worker.js).
    - Click **Deploy** in the top right.
-5. Add your Groq API key secret:
+5. Add your Secrets:
    - Go to your Worker's **Settings** tab → **Variables and Secrets**.
-   - Under **Secrets**, click **Add**.
-   - Set Name: `GROQ_API_KEY`
-   - Set Value: your Groq API key (from [console.groq.com/keys](https://console.groq.com/keys)).
+   - Under **Secrets**, click **Add**:
+     - **Name**: `GROQ_API_KEY`
+     - **Value**: your Groq API key (from [console.groq.com/keys](https://console.groq.com/keys)).
+   - Click **Add** again for GitHub Token (optional but recommended):
+     - **Name**: `GITHUB_TOKEN`
+     - **Value**: your Fine-Grained GitHub PAT (read-only on public repos).
    - Click **Save and Deploy**.
 6. Note your Worker URL (e.g. `https://gitstory-ai-proxy.<your-subdomain>.workers.dev`).
 7. (Optional) Set `VITE_DEMO_AI_PROXY_URL=https://gitstory-ai-proxy.<your-subdomain>.workers.dev` in GitHub Repository Secrets/Variables or `.env`.

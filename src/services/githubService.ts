@@ -6,6 +6,7 @@ import type {
   RepoSnapshot,
   VelocityPoint,
 } from '../types';
+import { getDemoAiProxyUrl } from './aiService';
 
 const GH_TOKEN_KEY = 'gitstory_github_token_v1';
 
@@ -117,7 +118,31 @@ async function githubFetch<T>(
     headers['If-None-Match'] = cached.etag;
   }
 
-  const resp = await fetch(url, { headers });
+  // If no user token is stored, route through the Cloudflare Worker proxy to leverage
+  // the edge token (5,000 req/hr) and 60-second Cloudflare edge cache
+  let fetchUrl = url;
+  if (!activeToken && url.startsWith('https://api.github.com/')) {
+    const proxyBase = getDemoAiProxyUrl();
+    if (proxyBase) {
+      fetchUrl = `${proxyBase}/github/${url.replace('https://api.github.com/', '')}`;
+    }
+  }
+
+  let resp: Response;
+  try {
+    resp = await fetch(fetchUrl, { headers });
+    // If the proxy returns 500/502/503, seamlessly fall back to direct GitHub
+    if (!resp.ok && fetchUrl !== url && resp.status >= 500) {
+      resp = await fetch(url, { headers });
+    }
+  } catch {
+    if (fetchUrl !== url) {
+      resp = await fetch(url, { headers });
+    } else {
+      throw new Error('Failed to reach GitHub API. Check your internet connection.');
+    }
+  }
+
   const remainingHeader = resp.headers.get('x-ratelimit-remaining');
   const rateLimitRemaining = remainingHeader !== null ? Number(remainingHeader) : null;
   const linkHeader = resp.headers.get('link');
