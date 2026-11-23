@@ -195,7 +195,22 @@ export async function fetchAvailableModelsDirect(
 }
 
 const STORY_SYSTEM_PROMPT =
-  'You are GitStory, a playful, warm community storyteller who transforms raw GitHub developer activity into clear, exciting, jargon-free progress reports for non-developers, project stakeholders, and fans. NEVER paste raw commit jargon, ticket IDs, or code syntax into headlines, chapter titles, or plain-English summaries. Always explain real-world user impact using friendly analogies, crisp everyday English, and cheerful emojis. Return ONLY valid JSON with no markdown code fences.';
+  'You are GitStory, a playful, warm community storyteller who transforms raw GitHub developer activity into clear, exciting, jargon-free progress reports for non-developers, project stakeholders, and fans. NEVER paste raw commit jargon, ticket IDs, or code syntax into headlines, chapter titles, or plain-English summaries. Always explain real-world user impact using friendly analogies, crisp everyday English, and cheerful emojis. Return ONLY a single raw valid JSON object matching the requested schema, without markdown code fences, reasoning thoughts, or conversational filler.';
+
+function extractJsonDigest(rawJson: string): Omit<AiDigest, 'generatedAt'> {
+  const cleaned = rawJson.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+  try {
+    return JSON.parse(cleaned) as Omit<AiDigest, 'generatedAt'>;
+  } catch {
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      const candidate = cleaned.slice(firstBrace, lastBrace + 1);
+      return JSON.parse(candidate) as Omit<AiDigest, 'generatedAt'>;
+    }
+    throw new Error('Unable to parse valid JSON from AI response.');
+  }
+}
 
 export async function generateStoryDigest(
   snapshot: RepoSnapshot,
@@ -275,20 +290,56 @@ ${JSON.stringify(prsPayload, null, 2)}
 Latest Release:
 ${latestRelease ? JSON.stringify(latestRelease, null, 2) : 'No formal GitHub releases yet.'}
 
-Respond with ONLY a valid JSON object (no markdown, no code fences) matching exactly this schema:
+Respond with ONLY a valid JSON object (no markdown, no code fences, no reasoning tags, no preamble) matching this schema structure:
 {
-  "headline": "string (under 14 words)",
-  "playfulSummary": "string (2-3 sentences non-technical overview)",
-  "momentumMood": "string (2-3 words)",
-  "momentumEmoji": "string (single emoji)",
-  "nextMilestoneEstimate": "string",
-  "milestoneProgressPct": number (25-95),
-  "progressChapters": [{ "emoji": "string", "title": "string", "summary": "string", "impactLabel": "string", "keyWins": ["string"], "relatedCount": number }],
-  "jargonDecoder": [{ "term": "string", "plainMeaning": "string", "emoji": "string" }],
-  "lifecycleStageBriefs": { "commits": "string", "prs": "string", "community": "string", "release": "string" },
-  "releaseTranslation": { "tagName": "string", "cheerfulTitle": "string", "summary": "string", "highlights": [{ "emoji": "string", "text": "string" }] } or null,
-  "commitTranslations": [{ "sha": "string", "emoji": "string", "plainTitle": "string", "whyItMatters": "string", "category": "string" }],
-  "prTranslations": [{ "number": number, "emoji": "string", "plainTitle": "string", "whyItMatters": "string", "category": "string" }]
+  "headline": "punchy headline under 14 words",
+  "playfulSummary": "2-3 sentences non-technical overview",
+  "momentumMood": "Blazing Fast / Steady Progress / Polish Mode",
+  "momentumEmoji": "⚡",
+  "nextMilestoneEstimate": "e.g. Next Feature Drop or v2.0 Release",
+  "milestoneProgressPct": 75,
+  "progressChapters": [
+    {
+      "emoji": "✨",
+      "title": "Clear user-facing accomplishment",
+      "summary": "1-2 sentences in plain English explaining what was improved",
+      "impactLabel": "Feature / Polish / Fix",
+      "keyWins": ["Key accomplishment 1", "Key accomplishment 2"],
+      "relatedCount": 3
+    }
+  ],
+  "jargonDecoder": [
+    {
+      "term": "technical term or acronym from the commits",
+      "plainMeaning": "simple everyday explanation",
+      "emoji": "💡"
+    }
+  ],
+  "lifecycleStageBriefs": {
+    "commits": "Short plain-English summary of active developer work",
+    "prs": "Short plain-English summary of community reviews and merged PRs",
+    "community": "Short plain-English summary of team and contributor energy",
+    "release": "Short plain-English summary of shipped version or next rollout"
+  },
+  "releaseTranslation": null,
+  "commitTranslations": [
+    {
+      "sha": "shortSha",
+      "emoji": "✨",
+      "plainTitle": "Plain-English title without git jargon",
+      "whyItMatters": "Why this matters to users or project health",
+      "category": "Polish"
+    }
+  ],
+  "prTranslations": [
+    {
+      "number": 123,
+      "emoji": "🎉",
+      "plainTitle": "Plain-English title of merged pull request",
+      "whyItMatters": "Why this merged contribution matters",
+      "category": "Feature"
+    }
+  ]
 }`;
 
   let rawJson = '';
@@ -338,27 +389,58 @@ Respond with ONLY a valid JSON object (no markdown, no code fences) matching exa
     rawJson = data.content?.[0]?.text || '';
   } else if (provider === 'demo') {
     const proxyUrl = getDemoAiProxyUrl();
-    const resp = await fetch(`${proxyUrl}/v1/chat/completions`, {
+    const demoPayload = {
+      model: model || 'openai/gpt-oss-120b',
+      messages: [
+        { role: 'system', content: STORY_SYSTEM_PROMPT },
+        { role: 'user', content: userPrompt },
+      ],
+      response_format: { type: 'json_object' },
+      reasoning_format: 'parsed',
+      max_completion_tokens: 4096,
+    };
+
+    let resp = await fetch(`${proxyUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: model || 'openai/gpt-oss-120b',
-        messages: [
-          { role: 'system', content: STORY_SYSTEM_PROMPT },
-          { role: 'user', content: userPrompt },
-        ],
-        response_format: { type: 'json_object' },
-      }),
+      body: JSON.stringify(demoPayload),
     });
 
     if (!resp.ok) {
-      const err = (await resp.json().catch(() => ({}))) as { error?: { message?: string; code?: string } };
-      if (resp.status === 429 || err.error?.code === 'demo_rate_limit_exceeded') {
-        throw new Error(
-          'Demo rate limit reached for this session. Please add your own free Gemini, Groq, or OpenAI key in settings to continue exploring!'
-        );
+      const err = (await resp.json().catch(() => ({}))) as {
+        error?: { message?: string; code?: string };
+      };
+
+      // Resilient fallback: If Groq rejected strict json_object format, retry with reasoning hidden
+      if (
+        resp.status === 400 &&
+        (err.error?.code === 'json_validate_failed' ||
+          err.error?.message?.includes('validate JSON'))
+      ) {
+        const fallbackPayload = {
+          ...demoPayload,
+          reasoning_format: 'hidden',
+        };
+        delete (fallbackPayload as Record<string, unknown>).response_format;
+
+        resp = await fetch(`${proxyUrl}/v1/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fallbackPayload),
+        });
       }
-      throw new Error(err.error?.message || `Demo AI error ${resp.status}`);
+
+      if (!resp.ok) {
+        const errRetry = (await resp.json().catch(() => ({}))) as {
+          error?: { message?: string; code?: string };
+        };
+        if (resp.status === 429 || errRetry.error?.code === 'demo_rate_limit_exceeded') {
+          throw new Error(
+            'Demo rate limit reached for this session. Please add your own free Gemini, Groq, or OpenAI key in settings to continue exploring!'
+          );
+        }
+        throw new Error(errRetry.error?.message || `Demo AI error ${resp.status}`);
+      }
     }
     const data = (await resp.json()) as { choices?: { message?: { content?: string } }[] };
     rawJson = data.choices?.[0]?.message?.content || '';
@@ -373,32 +455,65 @@ Respond with ONLY a valid JSON object (no markdown, no code fences) matching exa
             ? (localEndpoint?.replace(/\/$/, '') ?? 'http://localhost:11434/v1')
             : 'https://api.openai.com/v1';
 
-    const resp = await fetch(`${baseUrl}/chat/completions`, {
+    const reqPayload: Record<string, unknown> = {
+      model,
+      messages: [
+        { role: 'system', content: STORY_SYSTEM_PROMPT },
+        { role: 'user', content: userPrompt },
+      ],
+      response_format: { type: 'json_object' },
+      max_completion_tokens: 4096,
+    };
+
+    if (provider === 'groq') {
+      reqPayload.reasoning_format = 'parsed';
+    }
+
+    let resp = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: STORY_SYSTEM_PROMPT },
-          { role: 'user', content: userPrompt },
-        ],
-        response_format: { type: 'json_object' },
-      }),
+      body: JSON.stringify(reqPayload),
     });
 
     if (!resp.ok) {
-      const err = (await resp.json().catch(() => ({}))) as { error?: { message?: string } };
-      throw new Error(err.error?.message || `${provider} API error ${resp.status}`);
+      const err = (await resp.json().catch(() => ({}))) as {
+        error?: { message?: string; code?: string };
+      };
+
+      // Resilient fallback: If Groq or compatible server rejected strict json_object format, retry with reasoning hidden
+      if (
+        resp.status === 400 &&
+        (err.error?.code === 'json_validate_failed' ||
+          err.error?.message?.includes('validate JSON'))
+      ) {
+        const retryPayload = { ...reqPayload, reasoning_format: 'hidden' };
+        delete (retryPayload as Record<string, unknown>).response_format;
+
+        resp = await fetch(`${baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(retryPayload),
+        });
+      }
+
+      if (!resp.ok) {
+        const errRetry = (await resp.json().catch(() => ({}))) as {
+          error?: { message?: string };
+        };
+        throw new Error(errRetry.error?.message || `${provider} API error ${resp.status}`);
+      }
     }
     const data = (await resp.json()) as { choices?: { message?: { content?: string } }[] };
     rawJson = data.choices?.[0]?.message?.content || '';
   }
 
-  const cleaned = rawJson.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
-  const parsed = JSON.parse(cleaned) as Omit<AiDigest, 'generatedAt'>;
+  const parsed = extractJsonDigest(rawJson);
 
   return {
     ...parsed,

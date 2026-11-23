@@ -248,17 +248,21 @@ export default {
       model: modelToUse,
       messages: Array.isArray(body.messages) ? body.messages : [],
       temperature: typeof body.temperature === 'number' ? Math.min(Math.max(body.temperature, 0), 1) : 0.7,
-      max_tokens: Math.min(Number(body.max_tokens) || 2048, 2048), // Hard cap to prevent abuse
+      max_tokens: Math.min(Number(body.max_completion_tokens || body.max_tokens) || 4096, 4096),
       stream: Boolean(body.stream),
     };
 
     if (body.response_format) {
       groqPayload.response_format = body.response_format;
+      // Groq requires reasoning_format: 'parsed' or 'hidden' when JSON mode is active on reasoning models
+      groqPayload.reasoning_format = body.reasoning_format || 'parsed';
+    } else if (body.reasoning_format) {
+      groqPayload.reasoning_format = body.reasoning_format;
     }
 
-    // 7. Call Groq Cloud API
+    // 7. Call Groq Cloud API with resilient fallback on JSON validation errors
     try {
-      const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      let groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${groqApiKey}`,
@@ -266,6 +270,33 @@ export default {
         },
         body: JSON.stringify(groqPayload),
       });
+
+      // If Groq's server-side JSON validator fails (json_validate_failed), retry once with reasoning hidden and unconstrained JSON
+      if (!groqResponse.ok && groqPayload.response_format) {
+        const errorBody = await groqResponse.clone().json().catch(() => ({}));
+        if (
+          errorBody?.error?.code === 'json_validate_failed' ||
+          errorBody?.error?.message?.includes('validate JSON')
+        ) {
+          const fallbackPayload = {
+            ...groqPayload,
+            reasoning_format: 'hidden',
+          };
+          delete fallbackPayload.response_format;
+
+          const retryResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${groqApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(fallbackPayload),
+          });
+          if (retryResponse.ok) {
+            groqResponse = retryResponse;
+          }
+        }
+      }
 
       // Forward headers with CORS
       const responseHeaders = new Headers(groqResponse.headers);
