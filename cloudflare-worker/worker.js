@@ -10,6 +10,7 @@
 const DEFAULT_MODEL = 'openai/gpt-oss-120b';
 const ALLOWED_MODELS = new Set([
   'openai/gpt-oss-120b',
+  'openai/gpt-oss-20b',
   'qwen/qwen3.8-27b',
 ]);
 
