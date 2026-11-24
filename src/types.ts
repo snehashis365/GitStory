@@ -181,6 +181,18 @@ export interface MilestoneAlert {
   isSimulated?: boolean;
 }
 
+export interface GitHubRepoSearchResult {
+  fullName: string;
+  name: string;
+  ownerLogin: string;
+  ownerAvatarUrl: string;
+  description: string;
+  stars: number;
+  forks: number;
+  language: string;
+  updatedAt: string;
+}
+
 export type AIProviderType = 'demo' | 'groq' | 'gemini' | 'openai' | 'anthropic' | 'nvidia' | 'local';
 
 export interface AIProviderConfig {

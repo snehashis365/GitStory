@@ -27,8 +27,9 @@ import {
   Sparkles,
   Star,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
-import type { AiDigest, AIProviderConfig, MilestoneAlert, ReadmeOverview, RepoSnapshot } from './types';
+import type { AiDigest, AIProviderConfig, GitHubRepoSearchResult, MilestoneAlert, ReadmeOverview, RepoSnapshot } from './types';
 import {
   formatCompactNumber,
   formatRelativeTime,
@@ -50,7 +51,7 @@ import {
 import { AIProviderModal, loadAIConfig, clearAIConfig } from './components/AIProviderModal';
 import { calculateAdaptiveSyncInterval, type CadenceInfo } from './utils/cadence';
 import { loadCachedDigest, saveCachedDigest, clearAllRepoCache } from './utils/digestCache';
-import { fetchRepoSnapshot, fetchRepoReadme } from './services/githubService';
+import { fetchRepoSnapshot, fetchRepoReadme, searchGitHubRepos } from './services/githubService';
 import {
   generateStoryDigest,
   generateReadmeOverview,
@@ -110,6 +111,11 @@ export default function App() {
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [switcherInput, setSwitcherInput] = useState('');
   const [switcherError, setSwitcherError] = useState<string | null>(null);
+  const [switcherSearchResults, setSwitcherSearchResults] = useState<GitHubRepoSearchResult[]>([]);
+  const [isSwitcherSearching, setIsSwitcherSearching] = useState(false);
+  const [switcherSelectedIndex, setSwitcherSelectedIndex] = useState(-1);
+  const switcherAbortControllerRef = useRef<AbortController | null>(null);
+  const switcherContainerRef = useRef<HTMLDivElement>(null);
 
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const [secondsToSync, setSecondsToSync] = useState(DEFAULT_SYNC_INTERVAL_SECONDS);
@@ -447,15 +453,106 @@ export default function App() {
     void fetchAiSummary(snapshot, { forceRefresh: true });
   }, [snapshot, fetchAiSummary]);
 
-  const handleSwitcherSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    const normalized = normalizeRepoInput(switcherInput);
-    if (!normalized) {
-      setSwitcherError('Enter a valid GitHub link or owner/repo handle.');
+  // Debounced switcher search effect
+  useEffect(() => {
+    if (!switcherOpen) {
+      setSwitcherSearchResults([]);
+      setIsSwitcherSearching(false);
+      setSwitcherSelectedIndex(-1);
       return;
     }
+
+    const trimmed = switcherInput.trim();
+    if (!trimmed || trimmed.length < 2) {
+      setSwitcherSearchResults([]);
+      setIsSwitcherSearching(false);
+      setSwitcherSelectedIndex(-1);
+      return;
+    }
+
+    if (switcherAbortControllerRef.current) {
+      switcherAbortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    switcherAbortControllerRef.current = controller;
+
+    setIsSwitcherSearching(true);
+    const timeout = setTimeout(async () => {
+      try {
+        const results = await searchGitHubRepos(trimmed, {
+          signal: controller.signal,
+          limit: 5,
+        });
+        if (!controller.signal.aborted) {
+          setSwitcherSearchResults(results);
+          setIsSwitcherSearching(false);
+          setSwitcherSelectedIndex(-1);
+        }
+      } catch (err: unknown) {
+        if (controller.signal.aborted) return;
+        setIsSwitcherSearching(false);
+      }
+    }, 350);
+
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [switcherInput, switcherOpen]);
+
+  // Click outside to close switcher dropdown
+  useEffect(() => {
+    if (!switcherOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (switcherContainerRef.current && !switcherContainerRef.current.contains(e.target as Node)) {
+        setSwitcherSearchResults([]);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [switcherOpen]);
+
+  const handleSelectSwitcherRepo = (fullName: string) => {
+    setSwitcherInput('');
+    setSwitcherSearchResults([]);
+    setSwitcherOpen(false);
     setSwitcherError(null);
-    void loadRepository(normalized);
+    void loadRepository(fullName);
+  };
+
+  const handleSwitcherKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (switcherSearchResults.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSwitcherSelectedIndex((prev) => (prev + 1 < switcherSearchResults.length ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSwitcherSelectedIndex((prev) => (prev > 0 ? prev - 1 : switcherSearchResults.length - 1));
+    } else if (e.key === 'Escape') {
+      setSwitcherSearchResults([]);
+    }
+  };
+
+  const handleSwitcherSubmit = (e: FormEvent) => {
+    e.preventDefault();
+
+    if (switcherSelectedIndex >= 0 && switcherSearchResults[switcherSelectedIndex]) {
+      handleSelectSwitcherRepo(switcherSearchResults[switcherSelectedIndex].fullName);
+      return;
+    }
+
+    const normalized = normalizeRepoInput(switcherInput);
+    if (normalized) {
+      handleSelectSwitcherRepo(normalized);
+      return;
+    }
+
+    if (switcherSearchResults.length > 0) {
+      handleSelectSwitcherRepo(switcherSearchResults[0].fullName);
+      return;
+    }
+
+    setSwitcherError('Enter a valid GitHub link, owner/repo handle, or search term.');
   };
 
   if (!snapshot) {
@@ -720,37 +817,106 @@ export default function App() {
 
         {/* Expandable Quick Repo Switcher */}
         {switcherOpen && (
-          <motion.form
+          <motion.div
+            ref={switcherContainerRef}
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            onSubmit={handleSwitcherSubmit}
-            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+            className="relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm"
           >
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <input
-                type="text"
-                value={switcherInput}
-                onChange={(e) => {
-                  setSwitcherInput(e.target.value);
-                  if (switcherError) setSwitcherError(null);
-                }}
-                placeholder="Paste any GitHub URL or owner/repo (e.g. tailwindlabs/tailwindcss)"
-                className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-4 py-2.5 text-sm text-[#0F172A] dark:text-slate-100 focus:border-[#FF5A5F] focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
-              />
-              <button
-                type="submit"
-                disabled={isLoadingRepo}
-                className="rounded-xl bg-[#0F172A] dark:bg-slate-800 dark:hover:bg-slate-700 dark:border dark:border-slate-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60 whitespace-nowrap cursor-pointer"
-              >
-                {isLoadingRepo ? 'Loading...' : 'Load Repo'}
-              </button>
-            </div>
-            {(switcherError || repoError) && (
-              <p className="mt-2 text-xs font-medium text-red-600">
-                {switcherError || repoError}
-              </p>
+            <form onSubmit={handleSwitcherSubmit}>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <div className="relative flex-1 flex items-center">
+                  <input
+                    type="text"
+                    value={switcherInput}
+                    onChange={(e) => {
+                      setSwitcherInput(e.target.value);
+                      if (switcherError) setSwitcherError(null);
+                    }}
+                    onKeyDown={handleSwitcherKeyDown}
+                    placeholder="Search repos (e.g. react, tailwind) or paste owner/repo"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-900 px-4 py-2.5 pr-10 text-sm text-[#0F172A] dark:text-slate-100 focus:border-[#FF5A5F] focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
+                    autoComplete="off"
+                    spellCheck="false"
+                  />
+                  {isSwitcherSearching && (
+                    <div className="absolute right-3">
+                      <Loader2 className="h-4 w-4 text-[#FF5A5F] animate-spin" />
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  disabled={isLoadingRepo}
+                  className="rounded-xl bg-[#0F172A] dark:bg-slate-800 dark:hover:bg-slate-700 dark:border dark:border-slate-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60 whitespace-nowrap cursor-pointer"
+                >
+                  {isLoadingRepo ? 'Loading...' : 'Load Repo'}
+                </button>
+              </div>
+              {(switcherError || repoError) && (
+                <p className="mt-2 text-xs font-medium text-red-600">
+                  {switcherError || repoError}
+                </p>
+              )}
+            </form>
+
+            {/* Switcher Relevance Dropdown */}
+            {switcherSearchResults.length > 0 && (
+              <div className="absolute left-4 right-4 top-full mt-1.5 z-50 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 shadow-xl backdrop-blur-md divide-y divide-slate-100 dark:divide-slate-800/80">
+                <div className="flex items-center justify-between px-3.5 py-1.5 bg-slate-50 dark:bg-slate-800/50 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  <span>Relevance results</span>
+                  <span className="text-[10px] font-normal text-slate-400">↑↓ to navigate, Enter to select</span>
+                </div>
+                <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
+                  {switcherSearchResults.map((repo, idx) => (
+                    <button
+                      key={repo.fullName}
+                      type="button"
+                      onClick={() => handleSelectSwitcherRepo(repo.fullName)}
+                      onMouseEnter={() => setSwitcherSelectedIndex(idx)}
+                      className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors cursor-pointer ${
+                        switcherSelectedIndex === idx
+                          ? 'bg-[#FF5A5F]/10 dark:bg-[#FF5A5F]/15'
+                          : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        {repo.ownerAvatarUrl ? (
+                          <img
+                            src={repo.ownerAvatarUrl}
+                            alt={repo.ownerLogin}
+                            className="h-6 w-6 rounded-full border border-slate-200 dark:border-slate-700 shrink-0 object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="h-6 w-6 rounded-full bg-slate-200 dark:bg-slate-700 shrink-0" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline gap-1 truncate">
+                            <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
+                              @{repo.ownerLogin}/
+                            </span>
+                            <span className="font-semibold text-xs text-[#0F172A] dark:text-slate-100">
+                              {repo.name}
+                            </span>
+                          </div>
+                          {repo.description && (
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                              {repo.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400 shrink-0">
+                        <Star className="h-3 w-3 fill-current" />
+                        {formatCompactNumber(repo.stars)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
-          </motion.form>
+          </motion.div>
         )}
 
         {/* Hero Community AI Briefing + KPI Strip */}

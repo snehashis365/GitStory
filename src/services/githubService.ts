@@ -1,6 +1,7 @@
 import type {
   CommitItem,
   ContributorItem,
+  GitHubRepoSearchResult,
   PullRequestItem,
   ReleaseItem,
   RepoSnapshot,
@@ -139,7 +140,8 @@ export function parseLastPage(linkHeader: string | null | undefined): number | n
 async function githubFetch<T>(
   url: string,
   token?: string,
-  forceConditionalCheck = false
+  forceConditionalCheck = false,
+  signal?: AbortSignal
 ): Promise<{
   data: T;
   fromCache: boolean;
@@ -184,14 +186,17 @@ async function githubFetch<T>(
 
   let resp: Response;
   try {
-    resp = await fetch(fetchUrl, { headers });
+    resp = await fetch(fetchUrl, { headers, signal });
     // If the proxy returns 500/502/503, seamlessly fall back to direct GitHub
     if (!resp.ok && fetchUrl !== url && resp.status >= 500) {
-      resp = await fetch(url, { headers });
+      resp = await fetch(url, { headers, signal });
     }
-  } catch {
+  } catch (fetchErr: unknown) {
+    if (signal?.aborted || (fetchErr instanceof Error && fetchErr.name === 'AbortError')) {
+      throw fetchErr;
+    }
     if (fetchUrl !== url) {
-      resp = await fetch(url, { headers });
+      resp = await fetch(url, { headers, signal });
     } else {
       throw new Error('Failed to reach GitHub API. Check your internet connection.');
     }
@@ -633,3 +638,73 @@ export async function fetchRepoReadme(repoFullName: string): Promise<string> {
     return '';
   }
 }
+
+interface GitHubApiSearchItem {
+  id: number;
+  name: string;
+  full_name: string;
+  owner: {
+    login: string;
+    avatar_url: string;
+  };
+  description: string | null;
+  stargazers_count: number;
+  forks_count: number;
+  language: string | null;
+  updated_at: string;
+}
+
+interface GitHubApiSearchResponse {
+  total_count: number;
+  incomplete_results: boolean;
+  items: GitHubApiSearchItem[];
+}
+
+const searchCache = new Map<string, { results: GitHubRepoSearchResult[]; timestamp: number }>();
+const SEARCH_CACHE_TTL_MS = 120_000; // 2 minutes
+
+export async function searchGitHubRepos(
+  query: string,
+  options?: { signal?: AbortSignal; limit?: number }
+): Promise<GitHubRepoSearchResult[]> {
+  const cleaned = query.trim().replace(/^@/, '');
+  if (!cleaned || cleaned.length < 2) return [];
+
+  const cacheKey = cleaned.toLowerCase();
+  const cached = searchCache.get(cacheKey);
+  const now = Date.now();
+  if (cached && now - cached.timestamp < SEARCH_CACHE_TTL_MS) {
+    return cached.results;
+  }
+
+  const limit = options?.limit ?? 6;
+  // GitHub search sorts by best match / relevance by default when no sort parameter is given
+  const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(cleaned)}&per_page=${limit}`;
+
+  try {
+    const res = await githubFetch<GitHubApiSearchResponse>(url, undefined, false, options?.signal);
+    const items = res.data?.items ?? [];
+
+    const results: GitHubRepoSearchResult[] = items.map((item) => ({
+      fullName: item.full_name,
+      name: item.name,
+      ownerLogin: item.owner?.login || '',
+      ownerAvatarUrl: item.owner?.avatar_url || '',
+      description: item.description || '',
+      stars: Number(item.stargazers_count) || 0,
+      forks: Number(item.forks_count) || 0,
+      language: item.language || '',
+      updatedAt: item.updated_at || '',
+    }));
+
+    searchCache.set(cacheKey, { results, timestamp: now });
+    return results;
+  } catch (err: unknown) {
+    if (options?.signal?.aborted || (err instanceof Error && err.name === 'AbortError')) {
+      throw err;
+    }
+    if (cached) return cached.results;
+    throw err;
+  }
+}
+

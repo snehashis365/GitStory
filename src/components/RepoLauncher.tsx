@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useRef, useEffect, type FormEvent } from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight, Compass, Search, History, Sparkles, Layers, MessageCircle, Settings } from 'lucide-react';
-import { CURATED_REPOS, normalizeRepoInput } from '../utils/format';
-import type { AIProviderConfig } from '../types';
+import { ArrowRight, Compass, Search, History, Sparkles, Layers, MessageCircle, Settings, Star, Loader2 } from 'lucide-react';
+import { CURATED_REPOS, formatCompactNumber, normalizeRepoInput } from '../utils/format';
+import type { AIProviderConfig, GitHubRepoSearchResult } from '../types';
+import { searchGitHubRepos } from '../services/githubService';
 import {
   ReactFrameworkIcon,
   NextjsFrameworkIcon,
@@ -47,18 +48,123 @@ export function RepoLauncher({
 }: RepoLauncherProps) {
   const [input, setInput] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<GitHubRepoSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Debounced GitHub search effect
+  useEffect(() => {
+    const trimmed = input.trim();
+
+    // If input is short or empty, clear results and close dropdown
+    if (!trimmed || trimmed.length < 2) {
+      setSearchResults([]);
+      setIsSearching(false);
+      setIsDropdownOpen(false);
+      setSelectedIndex(-1);
+      return;
+    }
+
+    // Cancel previous search in flight
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    setIsSearching(true);
+    const timeout = setTimeout(async () => {
+      try {
+        const results = await searchGitHubRepos(trimmed, {
+          signal: controller.signal,
+          limit: 6,
+        });
+        if (!controller.signal.aborted) {
+          setSearchResults(results);
+          setIsSearching(false);
+          setIsDropdownOpen(true);
+          setSelectedIndex(-1);
+        }
+      } catch (err: unknown) {
+        if (controller.signal.aborted) return;
+        setIsSearching(false);
+      }
+    }, 350);
+
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [input]);
+
+  // Click outside listener to dismiss search dropdown
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelectResult = (fullName: string) => {
+    setInput(fullName);
+    setIsDropdownOpen(false);
+    setValidationError(null);
+    onSelectRepo(fullName);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isDropdownOpen || searchResults.length === 0) {
+      if (e.key === 'Escape') {
+        setIsDropdownOpen(false);
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev + 1 < searchResults.length ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : searchResults.length - 1));
+    } else if (e.key === 'Escape') {
+      setIsDropdownOpen(false);
+    }
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const normalized = normalizeRepoInput(input);
-    if (!normalized) {
-      setValidationError(
-        'Try pasting a GitHub link like https://github.com/facebook/react or shorthand like facebook/react.'
-      );
+
+    // 1. If an item in dropdown is actively selected with arrow keys, launch that
+    if (isDropdownOpen && selectedIndex >= 0 && searchResults[selectedIndex]) {
+      handleSelectResult(searchResults[selectedIndex].fullName);
       return;
     }
-    setValidationError(null);
-    onSelectRepo(normalized);
+
+    // 2. Direct normalization (e.g. user pasted full URL or typed owner/repo)
+    const normalized = normalizeRepoInput(input);
+    if (normalized) {
+      setIsDropdownOpen(false);
+      setValidationError(null);
+      onSelectRepo(normalized);
+      return;
+    }
+
+    // 3. If keyword search has matching results, pick the top relevance match
+    if (searchResults.length > 0) {
+      handleSelectResult(searchResults[0].fullName);
+      return;
+    }
+
+    setValidationError(
+      'Try searching a project name (e.g. "react" or "tailwind"), pasting a GitHub link, or owner/repo format.'
+    );
   };
 
   const displayError = validationError || initialError;
@@ -145,43 +251,138 @@ export function RepoLauncher({
             charts, and an interactive Project Lifecycle Pipeline Flow.
           </p>
 
-          {/* Primary Search Input */}
-          <form onSubmit={handleSubmit} className="mt-9">
-            <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 shadow-sm sm:flex-row sm:items-center focus-within:border-[#FF5A5F] focus-within:ring-4 focus-within:ring-[#FF5A5F]/12 transition-all">
-              <div className="flex flex-1 items-center gap-3 px-3">
-                <Search className="h-5 w-5 shrink-0 text-slate-400" />
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => {
-                    setInput(e.target.value);
-                    if (validationError) setValidationError(null);
-                  }}
-                  placeholder="Paste github.com/owner/repo or type facebook/react"
-                  aria-label="GitHub repository URL or owner/repo"
-                  className="w-full bg-transparent py-2.5 text-base text-[#0F172A] dark:text-slate-100 placeholder:text-slate-400 focus:outline-none"
+          {/* Primary Search Input with Autocomplete Dropdown */}
+          <div ref={containerRef} className="relative mt-9">
+            <form onSubmit={handleSubmit}>
+              <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 shadow-sm sm:flex-row sm:items-center focus-within:border-[#FF5A5F] focus-within:ring-4 focus-within:ring-[#FF5A5F]/12 transition-all">
+                <div className="flex flex-1 items-center gap-3 px-3">
+                  {isSearching ? (
+                    <Loader2 className="h-5 w-5 shrink-0 text-[#FF5A5F] animate-spin" />
+                  ) : (
+                    <Search className="h-5 w-5 shrink-0 text-slate-400" />
+                  )}
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => {
+                      setInput(e.target.value);
+                      if (validationError) setValidationError(null);
+                    }}
+                    onFocus={() => {
+                      if (searchResults.length > 0) setIsDropdownOpen(true);
+                    }}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Search repos (e.g. react, tailwind) or paste owner/repo"
+                    aria-label="Search GitHub repository or owner/repo"
+                    className="w-full bg-transparent py-2.5 text-base text-[#0F172A] dark:text-slate-100 placeholder:text-slate-400 focus:outline-none"
+                    disabled={isLoading}
+                    autoComplete="off"
+                    spellCheck="false"
+                  />
+                  {input && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInput('');
+                        setSearchResults([]);
+                        setIsDropdownOpen(false);
+                      }}
+                      className="text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-1.5 py-0.5 rounded cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="submit"
                   disabled={isLoading}
-                />
+                  className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#FF5A5F] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#E0484D] disabled:opacity-60 whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <span>{isLoading ? 'Loading Repo...' : 'Track Repository'}</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
               </div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#FF5A5F] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#E0484D] disabled:opacity-60 whitespace-nowrap shrink-0 cursor-pointer"
-              >
-                <span>{isLoading ? 'Loading Repo...' : 'Track Repository'}</span>
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </div>
 
-            {displayError && (
-              <p
-                role="alert"
-                className="mt-3 text-left text-sm font-medium text-[#DC2626] px-2"
-              >
-                {displayError}
-              </p>
+              {displayError && (
+                <p
+                  role="alert"
+                  className="mt-3 text-left text-sm font-medium text-[#DC2626] px-2"
+                >
+                  {displayError}
+                </p>
+              )}
+            </form>
+
+            {/* Relevance Dropdown */}
+            {isDropdownOpen && searchResults.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-2 z-50 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 shadow-xl backdrop-blur-md text-left divide-y divide-slate-100 dark:divide-slate-800/80">
+                <div className="flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-slate-800/50 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  <span>GitHub results sorted by relevance</span>
+                  <span className="text-[11px] font-normal text-slate-400">Use ↑↓ keys &amp; Enter</span>
+                </div>
+                <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
+                  {searchResults.map((repo, idx) => (
+                    <button
+                      key={repo.fullName}
+                      type="button"
+                      onClick={() => handleSelectResult(repo.fullName)}
+                      onMouseEnter={() => setSelectedIndex(idx)}
+                      className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors cursor-pointer ${
+                        selectedIndex === idx
+                          ? 'bg-[#FF5A5F]/10 dark:bg-[#FF5A5F]/15'
+                          : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {repo.ownerAvatarUrl ? (
+                          <img
+                            src={repo.ownerAvatarUrl}
+                            alt={repo.ownerLogin}
+                            className="h-7 w-7 rounded-full border border-slate-200 dark:border-slate-700 shrink-0 object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="h-7 w-7 rounded-full bg-slate-200 dark:bg-slate-700 shrink-0" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline gap-1.5 truncate">
+                            <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
+                              @{repo.ownerLogin}
+                            </span>
+                            <span className="text-slate-400 dark:text-slate-600">/</span>
+                            <span className="font-bold text-sm text-[#0F172A] dark:text-slate-100">
+                              {repo.name}
+                            </span>
+                          </div>
+                          {repo.description && (
+                            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 truncate">
+                              {repo.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        {repo.language && (
+                          <span className="hidden sm:inline-block rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:text-slate-400">
+                            {repo.language}
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                          <Star className="h-3.5 w-3.5 fill-current" />
+                          {formatCompactNumber(repo.stars)}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
-          </form>
+            {isDropdownOpen && !isSearching && searchResults.length === 0 && input.trim().length >= 2 && !normalizeRepoInput(input) && (
+              <div className="absolute left-0 right-0 top-full mt-2 z-50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl text-left text-sm text-slate-500 dark:text-slate-400">
+                No matching repositories found on GitHub for &quot;<span className="font-medium text-slate-700 dark:text-slate-200">{input.trim()}</span>&quot;.
+              </div>
+            )}
+          </div>
 
           {/* Recently Tracked Quick Links */}
           {recentRepos.length > 0 && (
