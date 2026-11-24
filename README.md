@@ -27,11 +27,12 @@
 - [🌟 What is GitStory?](#-what-is-gitstory)
 - [🚀 Key Superpowers](#-key-superpowers)
   - [1. 🤖 Universal AI Provider Hub](#1--universal-ai-provider-hub)
-  - [2. ⚡ Interactive 2D Lifecycle Flow](#2--interactive-2d-lifecycle-flow)
-  - [3. 📖 Project 101 & Peek Markdown README](#3--project-101--peek-markdown-readme)
-  - [4. 💬 Contextual AI Guide Drawer](#4--contextual-ai-guide-drawer)
-  - [5. ⏱️ Smart Adaptive Cadence & Auto-Sync](#5-️-smart-adaptive-cadence--auto-sync)
-  - [6. 🛡️ Dual-Tier Caching & Cloudflare Edge Gateway](#6-️-dual-tier-caching--cloudflare-edge-gateway)
+  - [2. 🔎 Live GitHub Relevance Search & Autocomplete](#2--live-github-relevance-search--autocomplete)
+  - [3. ⚡ Interactive 2D Lifecycle Flow](#3--interactive-2d-lifecycle-flow)
+  - [4. 📖 Project 101 & Peek Markdown README](#4--project-101--peek-markdown-readme)
+  - [5. 💬 Contextual AI Guide Drawer](#5--contextual-ai-guide-drawer)
+  - [6. ⏱️ Smart Adaptive Cadence & Auto-Sync](#6-️-smart-adaptive-cadence--auto-sync)
+  - [7. 🛡️ Dual-Tier Caching & Cloudflare Edge Gateway](#7-️-dual-tier-caching--cloudflare-edge-gateway)
 - [🛠️ Tech Stack](#️-tech-stack)
 - [🏁 Getting Started](#-getting-started)
 - [🌐 Deploying to GitHub Pages](#-deploying-to-github-pages)
@@ -46,12 +47,13 @@ Open-source repositories move fast, but deciphering what actually happened in a 
 
 **GitStory bridges the gap between raw Git commits and human understanding.**
 
-Simply paste any public GitHub repository (e.g. `facebook/react`, `vercel/next.js`, or custom GitHub URLs) and GitStory transforms engineering velocity into:
-1. **Story Chapters & Jargon Decoder** — Thematic summaries of features, refactors, bug fixes, and breaking changes.
-2. **Interactive 2D Project Lifecycle Pipeline Flow** — A responsive Motion flow tracking work from *Active Coding* $\to$ *Review & PR Merges* $\to$ *Community Velocity* $\to$ *Shipped Releases*.
-3. **Project 101 README Primer** — Executive-level "Big Idea", target audience, and key capabilities breakdown with an expandable, rendered GitHub Markdown viewer.
-4. **Context-Aware AI Tour Guide** — Full streaming conversational assistant answering questions about milestones, dependencies, or releases with GitHub-Flavored Markdown formatting.
-5. **Universal AI Engine** — Zero-config **Demo Gateway (powered by Groq + Cloudflare Edge)** out of the box, or BYOK for Gemini, OpenAI, Claude, NVIDIA NIM, and local Ollama.
+Simply search for any project name (e.g. `react`, `tailwind`, `three.js`) or paste a GitHub URL/shorthand, and GitStory transforms engineering velocity into:
+1. **Live Relevance Search & Autocomplete** — Instant keyboard-friendly search displaying repositories ranked by relevance with stars, descriptions, and avatars.
+2. **Story Chapters & Jargon Decoder** — Thematic summaries of features, refactors, bug fixes, and breaking changes.
+3. **Interactive 2D Project Lifecycle Pipeline Flow** — A responsive Motion flow tracking work from *Active Coding* $\to$ *Review & PR Merges* $\to$ *Community Velocity* $\to$ *Shipped Releases*.
+4. **Project 101 README Primer** — Executive-level "Big Idea", target audience, and key capabilities breakdown with an expandable, rendered GitHub Markdown viewer.
+5. **Context-Aware AI Tour Guide** — Full streaming conversational assistant answering questions about milestones, dependencies, or releases with GitHub-Flavored Markdown formatting.
+6. **Universal AI Engine** — Zero-config **Demo Gateway (powered by Groq + Cloudflare Edge)** out of the box, or BYOK for Gemini, OpenAI, Claude, NVIDIA NIM, and local Ollama.
 
 ---
 
@@ -76,7 +78,18 @@ GitStory is designed to work anywhere, with zero setup for new visitors and comp
 
 ---
 
-### 2. ⚡ Interactive 2D Lifecycle Flow
+### 2. 🔎 Live GitHub Relevance Search & Autocomplete
+
+GitStory features an intelligent hybrid repository parser and real-time search engine:
+- **Keyword & Topic Search**: Type any project or keyword (e.g. `react`, `tailwind`, `threejs`, `shadcn`) to query GitHub's Search API.
+- **Relevance-Sorted Autocomplete**: Repositories are ranked natively by GitHub's best match algorithm, displaying `@owner / repo` handles, real-time star counts, primary languages, and descriptions.
+- **Keyboard Navigation**: Seamlessly navigate results with `↑` and `↓` arrow keys, and press `Enter` to instantly load the repository.
+- **Direct Link Support**: Pasting a full GitHub URL (`https://github.com/owner/repo`) or shorthand (`owner/repo`) skips search and loads the repository immediately.
+- **Edge Caching & PAT Booster**: Routed through the Cloudflare Worker proxy with built-in 60-second edge caching and token injection, increasing rate limits from 10 to 30 requests/minute without exposing credentials.
+
+---
+
+### 3. ⚡ Interactive 2D Lifecycle Flow
 
 Replaces opaque 3D with an ultra-responsive, accessible **2D Motion Pipeline Flow**:
 - **01. Active Coding**: Commit pulse, author counts, and branch momentum.
@@ -88,7 +101,7 @@ Replaces opaque 3D with an ultra-responsive, accessible **2D Motion Pipeline Flo
 
 ---
 
-### 3. 📖 Project 101 & Peek Markdown README
+### 4. 📖 Project 101 & Peek Markdown README
 
 Need to understand an unfamiliar repository before diving into its commit history?
 - **Executive Analogy**: A friendly metaphor explaining what the software does in everyday life terms.
@@ -98,7 +111,7 @@ Need to understand an unfamiliar repository before diving into its commit histor
 
 ---
 
-### 4. 💬 Contextual AI Guide Drawer
+### 5. 💬 Contextual AI Guide Drawer
 
 - Conversational assistant embedded right into the repository workspace.
 - **GFM-Rendered Markdown**: Headers, syntax-highlighted code blocks with copy buttons, checklists, and formatted tables.
@@ -106,7 +119,7 @@ Need to understand an unfamiliar repository before diving into its commit histor
 
 ---
 
-### 5. ⏱️ Smart Adaptive Cadence & Auto-Sync
+### 6. ⏱️ Smart Adaptive Cadence & Auto-Sync
 
 Rather than spamming rigid 60-second polling against the GitHub API, GitStory features an intelligent cadence engine:
 - Measures inter-commit intervals over the latest commits.
@@ -116,7 +129,7 @@ Rather than spamming rigid 60-second polling against the GitHub API, GitStory fe
 
 ---
 
-### 6. 🛡️ Dual-Tier Caching & Cloudflare Edge Gateway
+### 7. 🛡️ Dual-Tier Caching & Cloudflare Edge Gateway
 
 ```
 [ Visitor Browser ] 
@@ -210,16 +223,16 @@ GitStory/
 │   ├── banner.svg                   # Animated vector GitHub README banner
 │   └── favicon.svg                  # Brand SVG favicon
 ├── src/
-│   ├── App.tsx                      # Top-level workspace & tab coordinator
+│   ├── App.tsx                      # Top-level workspace, quick switcher & tab coordinator
 │   ├── services/
-│   │   ├── githubService.ts         # GitHub REST aggregator & velocity series generator
+│   │   ├── githubService.ts         # GitHub REST aggregator, search engine & velocity series generator
 │   │   └── aiService.ts             # Multi-provider client & Groq/Worker connector
 │   ├── components/
 │   │   ├── AIProviderModal.tsx      # Modal for switching providers, BYOK & model discovery
 │   │   ├── ActivityFeed.tsx         # What Changed Recently chapters & Jargon Decoder
 │   │   ├── CommunityChatDrawer.tsx  # GFM-rendered streaming chat assistant
 │   │   ├── ProjectLifecyclePipeline.tsx # Interactive 2D Motion pipeline flow
-│   │   ├── RepoLauncher.tsx         # Clean landing search & curated community cards
+│   │   ├── RepoLauncher.tsx         # Relevance search input with autocomplete dropdown & curated cards
 │   │   ├── ThemeToggle.tsx          # 3-step Light / Auto / Dark theme toggle
 │   │   └── VelocityAndContributors.tsx # Real-time commit velocity charts & contributor stats
 │   ├── utils/
